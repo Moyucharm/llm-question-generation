@@ -1,7 +1,7 @@
 """
-FastAPI应用入口
+FastAPI Application Entry Point
 
-本小姐优雅地搭建了一个高性能的FastAPI后端服务!(￣▽￣)／
+High-performance FastAPI backend service for LLM-powered quiz system
 """
 
 from contextlib import asynccontextmanager
@@ -10,19 +10,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.db import init_db
+from app.api import auth_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理"""
-    # 启动时执行
+    """Application lifecycle management"""
+    # Startup
     print(f"[START] {settings.APP_NAME} v{settings.APP_VERSION} starting...")
     print(f"[ENV] Environment: {settings.ENVIRONMENT}")
     print(f"[DEBUG] Debug mode: {settings.DEBUG}")
 
+    # Initialize database
+    print("[DB] Initializing database...")
+    await init_db()
+    print("[DB] Database initialized successfully")
+
     yield
 
-    # 关闭时执行
+    # Shutdown
     print(f"[STOP] {settings.APP_NAME} shutting down...")
 
 
@@ -46,6 +53,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ===================================
+# API Routers
+# ===================================
+app.include_router(auth_router, prefix=settings.API_PREFIX)
 
 
 # ===================================

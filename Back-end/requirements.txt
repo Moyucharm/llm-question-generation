@@ -1,16 +1,18 @@
 # FastAPI Core
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
-pydantic==2.10.5
+pydantic[email]==2.10.5
 pydantic-settings==2.7.1
 
 # Database
 sqlalchemy==2.0.36
 aiosqlite==0.20.0
+greenlet==3.1.1
 
 # Security & Auth
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
 python-multipart==0.0.20
 
 # HTTP Client (for LLM API calls)
