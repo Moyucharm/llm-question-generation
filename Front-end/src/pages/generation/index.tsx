@@ -2,7 +2,6 @@ import React from 'react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useGenerationForm, usePresetManager } from './hooks';
 import { GenerationForm, PresetModal, SavePresetModal } from './components';
-import { OptimizedFloatingTimeRecorder } from '@/components/TimeRecorder';
 
 /**
  * 题目生成页面
@@ -64,36 +63,31 @@ export const GenerationPage: React.FC = () => {
   // 移除加载状态显示，让用户在生成过程中也能看到表单
 
   return (
-    <div className='min-h-screen bg-gray-50 py-8'>
-      <div className='max-w-4xl mx-auto px-4'>
-        <div className='bg-white rounded-lg shadow-lg overflow-hidden'>
-          {/* 页面头部 */}
-          <div className='bg-white px-8 py-6 border-b border-gray-200'>
-            <h1 className='text-3xl font-bold text-gray-800 mb-2'>
-              QuAIz AI 刷题
-            </h1>
-            <p className='text-gray-500'>Quiz You By AI Zipply</p>
-          </div>
-
-          {/* 生成表单 */}
-          <GenerationForm
-            formData={formData}
-            onSubjectChange={handleSubjectChange}
-            onDescriptionChange={handleDescriptionChange}
-            onQuestionConfigChange={handleQuestionConfigChange}
-            getQuestionCount={getQuestionCount}
-            getTotalQuestions={getTotalQuestions}
-            onSavePreset={handleSavePreset}
-            onLoadPreset={() => setShowPresetModal(true)}
-            onSubmit={handleSubmit}
-            isGenerating={generation.status === 'generating'}
-            error={generation.error}
-          />
+    <div className='max-w-4xl mx-auto'>
+      <div className='bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden'>
+        {/* 页面头部 */}
+        <div className='px-8 py-6 border-b border-gray-200'>
+          <h1 className='text-2xl font-bold text-gray-900 mb-1'>
+            AI 智能出题
+          </h1>
+          <p className='text-gray-500'>配置参数，让 AI 为你生成高质量题目</p>
         </div>
-      </div>
 
-      {/* 浮动时间记录组件 */}
-      <OptimizedFloatingTimeRecorder />
+        {/* 生成表单 */}
+        <GenerationForm
+          formData={formData}
+          onSubjectChange={handleSubjectChange}
+          onDescriptionChange={handleDescriptionChange}
+          onQuestionConfigChange={handleQuestionConfigChange}
+          getQuestionCount={getQuestionCount}
+          getTotalQuestions={getTotalQuestions}
+          onSavePreset={handleSavePreset}
+          onLoadPreset={() => setShowPresetModal(true)}
+          onSubmit={handleSubmit}
+          isGenerating={generation.status === 'generating'}
+          error={generation.error}
+        />
+      </div>
 
       {/* 预设选择模态框 */}
       <PresetModal

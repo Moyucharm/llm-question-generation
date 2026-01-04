@@ -1,17 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
 import { QuestionRenderer } from '@/components/Question/QuestionRenderer';
-import { Menu } from 'lucide-react';
-import {
-  QuizHeader,
-  QuizNavigation,
-  EmptyQuizState,
-  QuizPageLayout,
-} from './components';
+import { Menu, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { QuizNavigation, EmptyQuizState } from './components';
 import { useQuizNavigation, useQuizSubmission, useQuizStatus } from './hooks';
 import { FloatingButton } from '@/components/FloatingButton';
 import { FloatingPanel } from '@/components/FloatingButton/FloatingPanel';
-import { OptimizedFloatingTimeRecorder } from '@/components/TimeRecorder';
 import { useTimeRecorderStore } from '@/stores/timeRecorderStore';
 
 /**
@@ -88,86 +82,107 @@ export const QuizPage: React.FC = () => {
   }
 
   return (
-    <QuizPageLayout>
-      {/* 顶部导航栏 */}
-      <QuizHeader
-        quiz={quiz}
-        currentQuestionIndex={currentQuestionIndex}
-        answeredCount={answeredCount}
-        onReset={resetApp}
+    <div className="max-w-4xl mx-auto">
+      {/* 页面头部卡片 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {quiz.title || '在线答题'}
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              共 {quiz.questions.length} 题 · 已答 {answeredCount} 题
+            </p>
+          </div>
+          <button
+            onClick={resetApp}
+            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            重新开始
+          </button>
+        </div>
+
+        {/* 答题进度条 */}
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div
+            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            style={{
+              width: `${(answeredCount / quiz.questions.length) * 100}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* 题目导航按钮 */}
+      <FloatingButton
+        icon={Menu}
+        onClick={() => setIsNavigationVisible(!isNavigationVisible)}
+        position="right"
+        color="bg-blue-600"
+        hoverColor="hover:bg-blue-700"
+        title="题目导航"
+        top="top-40"
       />
 
-      <div className='max-w-4xl mx-auto px-4 py-8 relative'>
-        {/* 题目导航按钮 */}
-        <FloatingButton
-          icon={Menu}
-          onClick={() => setIsNavigationVisible(!isNavigationVisible)}
-          position='right'
-          color='bg-blue-600'
-          hoverColor='hover:bg-blue-700'
-          title='题目导航'
-          top='top-40'
+      {/* 题目导航面板 */}
+      <FloatingPanel
+        isVisible={isNavigationVisible}
+        onClose={() => setIsNavigationVisible(false)}
+        title="题目导航"
+        position="right"
+        top="top-72"
+        width="w-64"
+      >
+        <QuizNavigation
+          quiz={quiz}
+          currentQuestionIndex={currentQuestionIndex}
+          onQuestionSelect={index => {
+            handleQuestionSelect(index);
+            setIsNavigationVisible(false);
+          }}
+          isQuestionAnswered={isQuestionAnswered}
         />
+      </FloatingPanel>
 
-        {/* 浮动时间记录组件 */}
-        <OptimizedFloatingTimeRecorder />
-
-        {/* 题目导航面板 */}
-        <FloatingPanel
-          isVisible={isNavigationVisible}
-          onClose={() => setIsNavigationVisible(false)}
-          title='题目导航'
-          position='right'
-          top='top-72'
-          width='w-64'
-        >
-          <QuizNavigation
-            quiz={quiz}
-            currentQuestionIndex={currentQuestionIndex}
-            onQuestionSelect={index => {
-              handleQuestionSelect(index);
-              setIsNavigationVisible(false);
+      {/* 题目列表 */}
+      <div className="space-y-6">
+        {quiz.questions.map((question, index) => (
+          <div
+            key={question.id}
+            ref={el => {
+              questionRefs.current[index] = el;
             }}
-            isQuestionAnswered={isQuestionAnswered}
-          />
-        </FloatingPanel>
+            onClick={() => goToQuestion(index)}
+            style={{ scrollMarginTop: '100px', cursor: 'pointer' }}
+            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 transition-all hover:shadow-md"
+          >
+            <QuestionRenderer
+              question={question}
+              onAnswerChange={handleAnswerChange}
+              disabled={isSubmitted}
+              questionNumber={index + 1}
+            />
+          </div>
+        ))}
 
-        {/* 主内容区域 */}
-        <div className='w-full'>
-          {/* 所有题目内容 */}
-          <div className='space-y-8'>
-            {quiz.questions.map((question, index) => (
-              <div
-                key={question.id}
-                ref={el => {
-                  questionRefs.current[index] = el;
-                }}
-                onClick={() => goToQuestion(index)}
-                style={{ scrollMarginTop: '140px', cursor: 'pointer' }}
-                className='transition-colors hover:bg-gray-50 rounded-lg p-2 -m-2'
-              >
-                <QuestionRenderer
-                  question={question}
-                  onAnswerChange={handleAnswerChange}
-                  disabled={isSubmitted}
-                  questionNumber={index + 1}
-                />
-              </div>
-            ))}
-
-            {/* 提交按钮 */}
-            <div className='mt-8 flex justify-center'>
-              <button
-                onClick={() => handleSubmitQuiz(quiz)}
-                disabled={isSubmitted}
-                className='px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg font-medium'
-              >
-                {isSubmitted ? '已提交' : '提交试卷'}
-              </button>
+        {/* 提交按钮卡片 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 text-gray-600">
+              <CheckCircle2 className="w-5 h-5" />
+              <span>已完成 {answeredCount}/{quiz.questions.length} 题</span>
             </div>
+            <button
+              onClick={() => handleSubmitQuiz(quiz)}
+              disabled={isSubmitted}
+              className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              {isSubmitted ? '已提交' : '提交试卷'}
+            </button>
           </div>
         </div>
       </div>
-    </QuizPageLayout>
+    </div>
   );
 };
