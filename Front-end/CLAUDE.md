@@ -28,16 +28,42 @@ Key features include:
 
 ```
 src/
-├── components/    # Reusable UI components organized by feature
-├── pages/         # Page components (generation, quiz, result)
-├── stores/        # Zustand state management organized by feature
-├── llm/           # LLM API integration layer
-├── types/         # TypeScript type definitions
-├── hooks/         # Custom React hooks
-├── utils/         # Utility functions
-├── config/        # Application configuration
-├── router/        # Application routing
-└── test/          # Test utilities
+├── components/
+│   ├── Layout/        # 仪表板布局组件
+│   │   ├── DashboardLayout.tsx   # 主布局
+│   │   ├── Sidebar.tsx           # 左侧导航栏
+│   │   ├── TopBar.tsx            # 顶部导航栏
+│   │   ├── UserDropdown.tsx      # 用户下拉菜单
+│   │   └── PageContainer.tsx     # 内容区容器
+│   ├── UI/            # 基础UI组件
+│   │   ├── Button.tsx
+│   │   ├── Card.tsx
+│   │   ├── Avatar.tsx
+│   │   └── Spinner.tsx
+│   ├── Question/      # 题目相关组件
+│   ├── LogPanel/      # 日志面板
+│   ├── TimeRecorder/  # 时间记录
+│   └── FloatingButton/
+├── pages/
+│   ├── auth/          # 认证页面
+│   │   ├── LoginPage.tsx
+│   │   ├── RegisterPage.tsx
+│   │   └── components/
+│   ├── generation/    # 题目生成
+│   ├── quiz/          # 答题
+│   └── result/        # 结果
+├── stores/            # Zustand状态管理
+│   ├── useAppStore.ts
+│   └── useAuthStore.ts
+├── services/          # API服务层
+│   ├── authService.ts
+│   └── types.ts
+├── llm/               # LLM集成层
+├── types/             # TypeScript类型定义
+├── hooks/             # 自定义Hooks
+├── utils/             # 工具函数
+├── config/            # 配置
+└── router/            # 路由
 ```
 
 ## Common Development Commands
@@ -53,9 +79,29 @@ src/
 ### State Management
 The application uses Zustand for state management with a modular approach:
 - Main store in `src/stores/useAppStore.ts`
+- **Authentication store** in `src/stores/useAuthStore.ts` - 用户登录状态、Token管理
 - Modular actions in separate files (`generationActions.ts`, `answeringActions.ts`, `gradingActions.ts`)
 - Time tracking in `timeRecorderStore.ts`
 - Logging system in `logStore/`
+
+### Authentication System (认证系统)
+应用使用JWT进行用户认证:
+- `useAuthStore` - 管理用户状态 (user, token, isLoggedIn)
+- `authService` - 封装后端认证API调用
+- Token存储在localStorage
+- 未登录用户显示登录页面
+
+### Dashboard Layout (仪表板布局)
+应用采用现代仪表板布局设计:
+- `DashboardLayout` - 主布局容器
+- `Sidebar` - 左侧固定导航栏 (w-64, 深色主题)
+- `TopBar` - 顶部导航栏 (h-16) + 用户下拉菜单
+- `PageContainer` - 内容区容器 (浅灰背景)
+
+设计风格:
+- 浅灰背景 (`bg-gray-100`) + 白色卡片
+- 蓝色主题色 (`blue-600`)
+- 圆角卡片 + 轻阴影
 
 ### Routing
 The application uses a state-based routing system in `src/router/AppRouter.tsx` that automatically switches pages based on the application state:
