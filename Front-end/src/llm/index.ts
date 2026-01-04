@@ -1,6 +1,10 @@
 /**
  * LLM模块入口文件
  * 统一导出所有LLM相关功能
+ *
+ * 改造说明：
+ * - 不再检查前端API密钥配置（由后端管理）
+ * - 配置检查改为检查用户登录状态和后端连接
  */
 
 // API相关
@@ -30,28 +34,24 @@ export {
 
 /**
  * LLM模块配置检查
+ *
+ * 改造后：不再需要检查API密钥，密钥由后端管理
+ * 只检查后端API地址是否配置
  */
 export function checkLLMConfig(): {
   isConfigured: boolean;
   missingFields: string[];
 } {
-  const missingFields: string[] = [];
+  // 后端API模式下，前端不需要配置敏感信息
+  // 只需要确保baseUrl可用即可
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
 
-  if (!import.meta.env.VITE_LLM_API_KEY) {
-    missingFields.push('VITE_LLM_API_KEY');
-  }
-
-  if (!import.meta.env.VITE_LLM_BASE_URL) {
-    missingFields.push('VITE_LLM_BASE_URL');
-  }
-
-  if (!import.meta.env.VITE_LLM_MODEL) {
-    missingFields.push('VITE_LLM_MODEL');
-  }
+  // 检查用户是否已登录
+  const isLoggedIn = !!localStorage.getItem('access_token');
 
   return {
-    isConfigured: missingFields.length === 0,
-    missingFields,
+    isConfigured: !!baseUrl && isLoggedIn,
+    missingFields: isLoggedIn ? [] : ['用户未登录'],
   };
 }
 
@@ -59,11 +59,25 @@ export function checkLLMConfig(): {
  * 获取LLM配置状态
  */
 export function getLLMConfigStatus(): string {
-  const { isConfigured, missingFields } = checkLLMConfig();
+  const isLoggedIn = !!localStorage.getItem('access_token');
 
-  if (isConfigured) {
-    return 'LLM配置完整，可以使用真实API';
+  if (isLoggedIn) {
+    return 'LLM服务就绪，通过后端API调用';
   }
 
-  return `LLM配置不完整，缺少环境变量: ${missingFields.join(', ')}。当前将使用模拟API。`;
+  return '请先登录后使用LLM功能';
+}
+
+/**
+ * 检查用户是否已登录
+ */
+export function isUserLoggedIn(): boolean {
+  return !!localStorage.getItem('access_token');
+}
+
+/**
+ * 获取后端API基础URL
+ */
+export function getApiBaseUrl(): string {
+  return import.meta.env.VITE_API_BASE_URL || '/api';
 }

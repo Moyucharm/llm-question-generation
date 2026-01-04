@@ -27,12 +27,22 @@ export const APP_CONFIG = {
     autoSaveInterval: 30000,
   },
 
-  // API配置（模拟）
+  // 后端API配置
   api: {
+    // 后端API基础URL
+    baseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
+    // 请求超时时间（毫秒）
+    timeout: 60000,
+    // 流式请求超时时间（毫秒）
+    streamTimeout: 120000,
+  },
+
+  // 模拟配置（开发/演示用）
+  mock: {
     // 模拟生成延迟
-    mockGenerationDelay: 2000,
+    generationDelay: 2000,
     // 模拟批改延迟
-    mockGradingDelay: 3000,
+    gradingDelay: 3000,
   },
 } as const;
 
@@ -77,3 +87,14 @@ export const QUESTION_TYPE_CONFIG = {
     color: 'red',
   },
 } as const;
+
+/**
+ * 获取API配置
+ */
+export function getApiConfig() {
+  return {
+    baseUrl: APP_CONFIG.api.baseUrl,
+    timeout: APP_CONFIG.api.timeout,
+    streamTimeout: APP_CONFIG.api.streamTimeout,
+  };
+}

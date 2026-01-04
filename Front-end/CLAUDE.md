@@ -71,11 +71,23 @@ Components are organized into feature-based modules:
 - Time tracking: `src/components/TimeRecorder/`
 - Floating UI: `src/components/FloatingButton/`
 
-### LLM Integration
-The LLM integration is abstracted in the `src/llm/` directory with:
-- API clients in `src/llm/api/`
-- Business services in `src/llm/services/`
-- Prompt templates in `src/llm/prompt/`
+### LLM Integration (通过后端API)
+The LLM integration is abstracted in the `src/llm/` directory:
+- **API clients** in `src/llm/api/` - 已改造为调用后端API而非直连LLM厂商
+- **Business services** in `src/llm/services/`
+- **Prompt templates** in `src/llm/prompt/`
+
+**重要改造说明** (2026-01-04):
+- 所有LLM请求通过后端 `/api/llm/*` 端点转发
+- API密钥由后端管理，前端不再存储敏感信息
+- 使用JWT Token进行身份认证
+- SSE流式响应格式适配后端格式 `{"content": "...", "done": false/true}`
+
+### 后端API集成
+开发环境配置:
+- Vite开发服务器代理 `/api` 请求到 `http://localhost:8000`
+- 需要先启动后端服务器: `cd ../Back-end && uvicorn app.main:app --reload`
+- 用户需要登录后才能使用LLM功能
 
 ## Development Guidelines
 

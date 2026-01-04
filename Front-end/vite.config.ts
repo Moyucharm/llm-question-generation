@@ -14,7 +14,16 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000, // 更改端口为 3000
-    host: true, // 允许外部访问
+    port: 3000,
+    host: true,
+    // 开发环境代理配置：将/api请求转发到后端
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        // 可选：重写路径（如果后端API已经包含/api前缀则不需要）
+        // rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
 });

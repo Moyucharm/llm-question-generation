@@ -1,9 +1,14 @@
 /**
  * LLM API 客户端模块
- * 负责与大模型API进行通信，支持普通和流式请求
+ * 负责与后端LLM API进行通信，支持普通和流式请求
+ *
+ * 改造说明：
+ * - 所有LLM请求通过后端API转发，前端不再直连LLM厂商
+ * - 使用JWT Token进行身份认证
+ * - 适配后端SSE响应格式
  */
 
-import type { LLMConfig, LLMResponse } from './config';
+import type { LLMConfig, LLMResponse, LLMStreamChunk } from './config';
 import { DEFAULT_LLM_CONFIG } from './config';
 import { logger } from '@/stores/useLogStore';
 
@@ -22,7 +27,7 @@ export interface LLMRequest {
   messages: Message[];
   temperature?: number;
   max_tokens?: number;
-  model?: string;
+  provider?: string;
 }
 
 /**
@@ -39,7 +44,7 @@ export interface SimpleLLMResponse {
 
 /**
  * LLM API 客户端
- * 负责与大模型API进行通信
+ * 通过后端API与大模型进行通信
  */
 export class LLMClient {
   private config: LLMConfig;
@@ -49,17 +54,32 @@ export class LLMClient {
   }
 
   /**
+   * 获取JWT Token
+   */
+  private getAuthToken(): string | null {
+    return localStorage.getItem('access_token');
+  }
+
+  /**
    * 构建请求头
+   * 使用JWT Token进行身份认证
    */
   private buildHeaders(): Record<string, string> {
-    return {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.config.apiKey}`,
     };
+
+    const token = this.getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    return headers;
   }
 
   /**
    * 构建请求体
+   * 适配后端ChatRequest格式
    */
   private buildRequestBody(
     messages: Message[],
@@ -67,14 +87,15 @@ export class LLMClient {
       temperature?: number;
       max_tokens?: number;
       stream?: boolean;
+      provider?: string;
     }
   ): string {
     return JSON.stringify({
-      model: this.config.model,
-      messages,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
       temperature: options.temperature ?? this.config.temperature,
       max_tokens: options.max_tokens ?? this.config.maxTokens,
-      stream: options.stream ?? true,
+      stream: options.stream ?? false,
+      provider: options.provider,
     });
   }
 
@@ -82,17 +103,36 @@ export class LLMClient {
    * 处理错误响应
    */
   private async handleErrorResponse(response: Response): Promise<never> {
-    const errorText = await response.text();
-    throw new Error(
-      `HTTP ${response.status}: ${response.statusText}. ${errorText}`
-    );
+    let errorMessage: string;
+
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || JSON.stringify(errorData);
+    } catch {
+      errorMessage = await response.text();
+    }
+
+    // 处理认证错误
+    if (response.status === 401) {
+      throw new Error('认证失败，请重新登录');
+    }
+
+    throw new Error(`HTTP ${response.status}: ${errorMessage}`);
   }
 
   /**
    * 验证配置是否完整
    */
   private validateConfig(): boolean {
-    return !!(this.config.apiKey && this.config.baseUrl && this.config.model);
+    // 只检查baseUrl，不再需要apiKey
+    return !!this.config.baseUrl;
+  }
+
+  /**
+   * 检查用户是否已登录
+   */
+  private isAuthenticated(): boolean {
+    return !!this.getAuthToken();
   }
 
   /**
@@ -109,32 +149,31 @@ export class LLMClient {
     messages: Message[];
     temperature?: number;
     max_tokens?: number;
+    provider?: string;
   }): Promise<SimpleLLMResponse> {
     const requestId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // 构建实际请求参数
-    const requestParams = {
-      model: this.config.model,
-      messages: options.messages,
-      temperature: options.temperature ?? this.config.temperature,
-      max_tokens: options.max_tokens ?? this.config.maxTokens,
-      stream: false,
-    };
-
     try {
       if (!this.validateConfig()) {
-        const error = 'LLM API配置不完整，请检查apiKey、baseUrl和model配置';
+        const error = 'LLM API配置不完整，请检查baseUrl配置';
         logger.llm.error('配置验证失败', { requestId, error });
         throw new Error(error);
       }
 
-      const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
+      if (!this.isAuthenticated()) {
+        const error = '请先登录后再使用LLM功能';
+        logger.llm.error('认证检查失败', { requestId, error });
+        throw new Error(error);
+      }
+
+      const response = await fetch(`${this.config.baseUrl}/llm/chat`, {
         method: 'POST',
         headers: this.buildHeaders(),
-        body: this.buildRequestBody(requestParams.messages, {
-          temperature: requestParams.temperature,
-          max_tokens: requestParams.max_tokens,
-          stream: requestParams.stream,
+        body: this.buildRequestBody(options.messages, {
+          temperature: options.temperature,
+          max_tokens: options.max_tokens,
+          stream: false,
+          provider: options.provider,
         }),
       });
 
@@ -144,21 +183,22 @@ export class LLMClient {
 
       const data: LLMResponse = await response.json();
 
-      if (
-        !data.choices ||
-        !Array.isArray(data.choices) ||
-        data.choices.length === 0
-      ) {
-        throw new Error('API响应格式错误：缺少choices字段');
-      }
-
       const result: SimpleLLMResponse = {
-        content: data.choices[0].message.content,
+        content: data.content,
+        usage: data.total_tokens
+          ? {
+              prompt_tokens: data.prompt_tokens || 0,
+              completion_tokens: data.completion_tokens || 0,
+              total_tokens: data.total_tokens,
+            }
+          : undefined,
       };
 
       logger.llm.success('普通聊天请求成功', {
         requestId,
         contentLength: result.content.length,
+        provider: data.provider,
+        model: data.model,
       });
 
       return result;
@@ -171,37 +211,37 @@ export class LLMClient {
 
   /**
    * 流式聊天请求
+   * 适配后端SSE响应格式: {"content": "...", "done": false/true}
    */
   async *chatStream(options: {
     messages: Message[];
     temperature?: number;
     max_tokens?: number;
+    provider?: string;
   }): AsyncGenerator<string, void, unknown> {
     const requestId = `chat-stream-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // 构建实际请求参数
-    const requestParams = {
-      model: this.config.model,
-      messages: options.messages,
-      temperature: options.temperature ?? this.config.temperature,
-      max_tokens: options.max_tokens ?? this.config.maxTokens,
-      stream: true,
-    };
-
     try {
       if (!this.validateConfig()) {
-        const error = 'LLM API配置不完整，请检查apiKey、baseUrl和model配置';
+        const error = 'LLM API配置不完整，请检查baseUrl配置';
         logger.llm.error('配置验证失败', { requestId, error });
         throw new Error(error);
       }
 
-      const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
+      if (!this.isAuthenticated()) {
+        const error = '请先登录后再使用LLM功能';
+        logger.llm.error('认证检查失败', { requestId, error });
+        throw new Error(error);
+      }
+
+      const response = await fetch(`${this.config.baseUrl}/llm/chat/stream`, {
         method: 'POST',
         headers: this.buildHeaders(),
-        body: this.buildRequestBody(requestParams.messages, {
-          temperature: requestParams.temperature,
-          max_tokens: requestParams.max_tokens,
-          stream: requestParams.stream,
+        body: this.buildRequestBody(options.messages, {
+          temperature: options.temperature,
+          max_tokens: options.max_tokens,
+          stream: true,
+          provider: options.provider,
         }),
       });
 
@@ -239,24 +279,30 @@ export class LLMClient {
             if (trimmedLine.startsWith('data: ')) {
               try {
                 const jsonStr = trimmedLine.slice(6);
-                const data = JSON.parse(jsonStr);
+                const data: LLMStreamChunk = JSON.parse(jsonStr);
 
-                if (
-                  data.choices &&
-                  data.choices[0] &&
-                  data.choices[0].delta &&
-                  data.choices[0].delta.content
-                ) {
-                  const chunk = data.choices[0].delta.content;
+                // 检查是否有错误
+                if (data.error) {
+                  throw new Error(data.error);
+                }
+
+                // 提取内容
+                if (data.content) {
                   totalChunks++;
-                  yield chunk;
+                  yield data.content;
                 }
               } catch (parseError) {
-                logger.llm.error('解析流式数据失败', {
-                  requestId,
-                  line: trimmedLine,
-                  error: parseError,
-                });
+                // JSON解析错误，可能是不完整的数据
+                if (
+                  parseError instanceof SyntaxError &&
+                  !trimmedLine.includes('[DONE]')
+                ) {
+                  logger.llm.error('解析流式数据失败', {
+                    requestId,
+                    line: trimmedLine,
+                    error: parseError,
+                  });
+                }
               }
             }
           }
