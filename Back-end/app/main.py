@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.db import init_db
-from app.api import auth_router
+from app.api import auth_router, llm_router
 
 
 @asynccontextmanager
@@ -59,6 +59,7 @@ app.add_middleware(
 # API Routers
 # ===================================
 app.include_router(auth_router, prefix=settings.API_PREFIX)
+app.include_router(llm_router, prefix=settings.API_PREFIX)
 
 
 # ===================================
