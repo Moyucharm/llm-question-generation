@@ -10,6 +10,7 @@ import { OptimizedFloatingTimeRecorder } from '@/components/TimeRecorder';
 import { DashboardLayout } from '@/components/Layout';
 import { LoadingScreen } from '@/components/UI';
 import { LoginPage, RegisterPage } from '@/pages/auth';
+import { CourseManagementPage } from '@/pages/course/CourseManagementPage';
 
 /**
  * 主应用组件
@@ -135,6 +136,8 @@ function App() {
               </button>
             </div>
           </div>
+        ) : currentPage === 'question-bank' ? (
+          <CourseManagementPage />
         ) : (
           // AI出题页面 - 使用现有的状态路由
           <>

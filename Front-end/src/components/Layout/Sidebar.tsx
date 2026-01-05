@@ -19,7 +19,7 @@ import { SidebarItem } from './SidebarItem';
 const menuItems = [
   { icon: Home, label: '仪表板', path: 'dashboard', enabled: true },
   { icon: Sparkles, label: 'AI出题', path: 'generation', enabled: true },
-  { icon: FileText, label: '题库管理', path: 'question-bank', enabled: false, badge: '即将推出' },
+  { icon: FileText, label: '题库管理', path: 'question-bank', enabled: true },
   { icon: ClipboardList, label: '考试管理', path: 'exams', enabled: false, badge: '即将推出' },
   { icon: BarChart2, label: '学习分析', path: 'analytics', enabled: false, badge: '即将推出' },
   { icon: History, label: '历史记录', path: 'history', enabled: false, badge: '即将推出' },

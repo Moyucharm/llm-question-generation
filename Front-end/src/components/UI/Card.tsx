@@ -4,7 +4,7 @@
 
 import React from 'react';
 
-interface CardProps {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
   padding?: 'none' | 'sm' | 'md' | 'lg';
@@ -21,6 +21,7 @@ export const Card: React.FC<CardProps> = ({
   children,
   className = '',
   padding = 'md',
+  ...props
 }) => {
   return (
     <div
@@ -29,6 +30,7 @@ export const Card: React.FC<CardProps> = ({
         ${paddingStyles[padding]}
         ${className}
       `}
+      {...props}
     >
       {children}
     </div>

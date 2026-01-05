@@ -11,8 +11,10 @@ from app.services.generation_pipeline import (
     GenerationPipeline,
     PipelineResult,
     ProcessedQuestion,
+    ProcessedQuestion,
     QuestionStatus,
 )
+from app.services.course_service import CourseService
 
 __all__ = [
     # Auth
@@ -32,4 +34,6 @@ __all__ = [
     "PipelineResult",
     "ProcessedQuestion",
     "QuestionStatus",
+    # Course
+    "CourseService",
 ]
