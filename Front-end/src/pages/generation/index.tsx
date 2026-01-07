@@ -19,6 +19,8 @@ export const GenerationPage: React.FC = () => {
     setFormData,
     handleSubjectChange,
     handleDescriptionChange,
+    handleCourseChange,
+    handleKnowledgePointChange,
     handleQuestionConfigChange,
     getTotalQuestions,
     getQuestionCount,
@@ -78,6 +80,8 @@ export const GenerationPage: React.FC = () => {
           formData={formData}
           onSubjectChange={handleSubjectChange}
           onDescriptionChange={handleDescriptionChange}
+          onCourseChange={handleCourseChange}
+          onKnowledgePointChange={handleKnowledgePointChange}
           onQuestionConfigChange={handleQuestionConfigChange}
           getQuestionCount={getQuestionCount}
           getTotalQuestions={getTotalQuestions}

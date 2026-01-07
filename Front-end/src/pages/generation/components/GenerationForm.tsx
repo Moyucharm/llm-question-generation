@@ -1,8 +1,10 @@
 import React from 'react';
 import type { GenerationRequest } from '@/types';
 import { QuestionType } from '@/types';
+import type { KnowledgePoint } from '@/types/course';
 import { QuestionTypeSelector } from './QuestionTypeSelector';
 import { GenerationPreview } from './GenerationPreview';
+import { CourseKnowledgeSelector } from './CourseKnowledgeSelector';
 import { executeTextStreamLLMRequest } from '@/llm/utils/streamService';
 import { LLMClient } from '@/llm/api/client';
 import { logger } from '@/stores/useLogStore';
@@ -11,6 +13,8 @@ interface GenerationFormProps {
   formData: GenerationRequest;
   onSubjectChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
+  onCourseChange: (courseId: number | undefined, courseName?: string) => void;
+  onKnowledgePointChange: (point: KnowledgePoint | undefined) => void;
   onQuestionConfigChange: (type: QuestionType, count: number) => void;
   getQuestionCount: (type: QuestionType) => number;
   getTotalQuestions: () => number;
@@ -29,6 +33,8 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
   formData,
   onSubjectChange,
   onDescriptionChange,
+  onCourseChange,
+  onKnowledgePointChange,
   onQuestionConfigChange,
   getQuestionCount,
   getTotalQuestions,
@@ -40,6 +46,14 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
 }) => {
   return (
     <form onSubmit={onSubmit} className='p-8'>
+      {/* 课程与知识点选择 */}
+      <CourseKnowledgeSelector
+        courseId={formData.courseId}
+        knowledgePointId={formData.knowledgePointId}
+        onCourseChange={onCourseChange}
+        onKnowledgePointChange={onKnowledgePointChange}
+      />
+
       {/* 基础信息 */}
       <div className='space-y-6 mb-8'>
         <div>

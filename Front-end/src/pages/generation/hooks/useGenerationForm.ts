@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { GenerationRequest } from '@/types';
 import { QuestionType } from '@/types';
+import type { KnowledgePoint } from '@/types/course';
 
 /**
  * 表单状态管理钩子
@@ -12,6 +13,9 @@ export function useGenerationForm() {
     subject: '',
     description: '',
     questionConfigs: [],
+    courseId: undefined,
+    knowledgePointId: undefined,
+    knowledgePointName: undefined,
   });
 
   /**
@@ -29,6 +33,35 @@ export function useGenerationForm() {
   const handleDescriptionChange = (value: string) => {
     setFormData(prev => ({ ...prev, description: value }));
   };
+
+  /**
+   * 更新课程选择
+   * @param courseId 课程 ID
+   * @param courseName 课程名称（可选，用于自动填充学科）
+   */
+  const handleCourseChange = useCallback((courseId: number | undefined, courseName?: string) => {
+    setFormData(prev => ({
+      ...prev,
+      courseId,
+      // 切换课程时清空知识点选择
+      knowledgePointId: undefined,
+      knowledgePointName: undefined,
+      // 如果提供了课程名称，自动填充学科字段
+      subject: courseName || prev.subject,
+    }));
+  }, []);
+
+  /**
+   * 更新知识点选择
+   * @param point 选中的知识点
+   */
+  const handleKnowledgePointChange = useCallback((point: KnowledgePoint | undefined) => {
+    setFormData(prev => ({
+      ...prev,
+      knowledgePointId: point?.id,
+      knowledgePointName: point?.name,
+    }));
+  }, []);
 
   /**
    * 更新题型配置
@@ -86,8 +119,11 @@ export function useGenerationForm() {
     setFormData,
     handleSubjectChange,
     handleDescriptionChange,
+    handleCourseChange,
+    handleKnowledgePointChange,
     handleQuestionConfigChange,
     getTotalQuestions,
     getQuestionCount,
   };
 }
+

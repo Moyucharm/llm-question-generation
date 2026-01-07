@@ -27,6 +27,9 @@ export interface GenerationRequest {
   subject: string; // 学科/主题
   description: string; // 用户描述
   questionConfigs: QuestionConfig[]; // 题型配置
+  courseId?: number; // 关联课程 ID（可选）
+  knowledgePointId?: number; // 关联知识点 ID（可选）
+  knowledgePointName?: string; // 知识点名称（传递给后端）
 }
 
 // ================================

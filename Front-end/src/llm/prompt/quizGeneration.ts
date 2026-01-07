@@ -103,7 +103,7 @@ function generateSystemPrompt(): string {
  * 生成用户提示词
  */
 function generateUserPrompt(request: GenerationRequest): string {
-  const { subject, description, questionConfigs } = request;
+  const { subject, description, questionConfigs, knowledgePointName } = request;
 
   // 构建题型要求说明
   const questionTypeRequirements = questionConfigs
@@ -119,10 +119,16 @@ function generateUserPrompt(request: GenerationRequest): string {
     0
   );
 
+  // 构建知识点说明
+  const knowledgePointSection = knowledgePointName
+    ? `知识点范围：${knowledgePointName}（请围绕这个知识点出题，但不要在题目文本中直接提及知识点名称）
+`
+    : '';
+
   return `请为以下学科主题生成试卷：
 
 学科/主题：${subject}
-用户描述：${description || '无特殊要求'}
+${knowledgePointSection}用户描述：${description || '无特殊要求'}
 
 题型要求（共${totalQuestions}道题）：
 ${questionTypeRequirements}
@@ -138,11 +144,12 @@ ${questionTypeRequirements}
 }
 
 注意：
-1. 题目内容要与"${subject}"主题相关
-2. 严格按照每种题型的JSON格式要求
-3. 题目编号从q1开始递增
-4. 只输出JSON数据，不要包含任何解释文字
-5. 确保JSON格式正确，可以被直接解析`;
+1. 题目内容要与"${subject}"主题相关${knowledgePointName ? `，重点考察"${knowledgePointName}"相关的知识` : ''}
+2. 题目表述要自然流畅，不要在题目文本中出现"根据xxx知识点"、"在xxx章节中"等引用知识点名称的表述
+3. 严格按照每种题型的JSON格式要求
+4. 题目编号从q1开始递增
+5. 只输出JSON数据，不要包含任何解释文字
+6. 确保JSON格式正确，可以被直接解析`;
 }
 
 /**
