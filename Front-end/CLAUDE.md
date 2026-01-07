@@ -40,6 +40,9 @@ src/
 │   │   ├── Card.tsx
 │   │   ├── Avatar.tsx
 │   │   └── Spinner.tsx
+│   ├── Course/        # 课程相关组件
+│   │   ├── CourseList.tsx
+│   │   └── KnowledgePointTree.tsx
 │   ├── Question/      # 题目相关组件
 │   ├── LogPanel/      # 日志面板
 │   ├── TimeRecorder/  # 时间记录
@@ -50,13 +53,19 @@ src/
 │   │   ├── RegisterPage.tsx
 │   │   └── components/
 │   ├── generation/    # 题目生成
+│   │   └── components/
+│   │       └── CourseKnowledgeSelector.tsx  # 课程/知识点选择器
+│   ├── course/        # 课程管理
+│   │   └── CourseManagementPage.tsx
 │   ├── quiz/          # 答题
 │   └── result/        # 结果
 ├── stores/            # Zustand状态管理
 │   ├── useAppStore.ts
-│   └── useAuthStore.ts
+│   ├── useAuthStore.ts
+│   └── useCourseStore.ts  # 课程状态管理
 ├── services/          # API服务层
 │   ├── authService.ts
+│   ├── courseService.ts   # 课程API服务
 │   └── types.ts
 ├── llm/               # LLM集成层
 ├── types/             # TypeScript类型定义
