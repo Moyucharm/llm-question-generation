@@ -53,10 +53,10 @@ class Exam(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
-    paper_id: Mapped[int] = mapped_column(
+    paper_id: Mapped[Optional[int]] = mapped_column(
         Integer,
-        ForeignKey("papers.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("papers.id", ondelete="SET NULL"),
+        nullable=True,
     )
     start_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     end_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

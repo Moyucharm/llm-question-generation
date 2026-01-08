@@ -11,6 +11,7 @@ import { DashboardLayout } from '@/components/Layout';
 import { LoadingScreen } from '@/components/UI';
 import { LoginPage, RegisterPage } from '@/pages/auth';
 import { CourseManagementPage } from '@/pages/course/CourseManagementPage';
+import { ExamListPage, CreateExamPage } from '@/pages/exam';
 
 /**
  * 主应用组件
@@ -138,6 +139,10 @@ function App() {
           </div>
         ) : currentPage === 'question-bank' ? (
           <CourseManagementPage />
+        ) : currentPage === 'exams' ? (
+          <ExamListPage onNavigate={handlePageChange} />
+        ) : currentPage === 'exam-create' ? (
+          <CreateExamPage onNavigate={handlePageChange} />
         ) : (
           // AI出题页面 - 使用现有的状态路由
           <>
