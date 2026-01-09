@@ -57,18 +57,27 @@ src/
 │   │       └── CourseKnowledgeSelector.tsx  # 课程/知识点选择器
 │   ├── course/        # 课程管理
 │   │   └── CourseManagementPage.tsx
+│   ├── exam/          # 考试管理 🆕
+│   │   ├── ExamListPage.tsx      # 考试列表
+│   │   ├── CreateExamPage.tsx    # 创建考试
+│   │   └── ExamDetailPage.tsx    # 考试详情
 │   ├── quiz/          # 答题
 │   └── result/        # 结果
 ├── stores/            # Zustand状态管理
 │   ├── useAppStore.ts
 │   ├── useAuthStore.ts
-│   └── useCourseStore.ts  # 课程状态管理
+│   ├── useCourseStore.ts  # 课程状态管理
+│   └── useExamStore.ts    # 考试状态管理 🆕
 ├── services/          # API服务层
 │   ├── authService.ts
 │   ├── courseService.ts   # 课程API服务
+│   ├── examService.ts     # 考试API服务 🆕
 │   └── types.ts
 ├── llm/               # LLM集成层
 ├── types/             # TypeScript类型定义
+│   ├── index.ts
+│   ├── course.ts
+│   └── exam.ts            # 考试类型定义 🆕
 ├── hooks/             # 自定义Hooks
 ├── utils/             # 工具函数
 ├── config/            # 配置
@@ -113,11 +122,17 @@ The application uses Zustand for state management with a modular approach:
 - 圆角卡片 + 轻阴影
 
 ### Routing
-The application uses a state-based routing system in `src/router/AppRouter.tsx` that automatically switches pages based on the application state:
-1. Generation page (default)
-2. Quiz page (when quiz is generated)
-3. Streaming quiz page (during generation)
-4. Result page (after submission)
+The application uses a state-based routing system in `src/App.tsx` that switches pages based on `currentPage` state:
+1. Dashboard - 仪表板首页
+2. Generation - AI 出题页面
+3. Question Bank - 题库管理
+4. Exams - 考试管理 (列表/创建/详情) 🆕
+5. Quiz/Result - 答题和结果页面
+
+考试页面路由示例:
+- `exams` - 考试列表
+- `exam-create` - 创建考试
+- `exam-detail` - 考试详情 (requires `currentExamId`)
 
 ### Component Organization
 Components are organized into feature-based modules:
