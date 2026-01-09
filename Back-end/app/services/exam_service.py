@@ -507,3 +507,149 @@ class ExamService:
         )
         result = await self.db.execute(query)
         return result.scalar() or 0
+
+    # ===================================
+    # Question Management (Simplified)
+    # ===================================
+
+    async def add_question_to_exam(
+        self,
+        exam_id: int,
+        question_data: dict,
+        teacher_id: int
+    ) -> Optional[Question]:
+        """
+        直接向考试添加题目
+        如果考试没有关联试卷，自动创建一个
+        """
+        from app.models.question import QuestionType
+
+        exam = await self.get_exam(exam_id)
+        if not exam or exam.published_by != teacher_id:
+            return None
+
+        if exam.status != ExamStatus.DRAFT:
+            return None  # 只能在草稿状态添加题目
+
+        # 如果没有试卷，创建一个
+        if not exam.paper_id:
+            paper = Paper(
+                title=f"{exam.title} - 试卷",
+                description="自动创建的试卷",
+                created_by=teacher_id,
+            )
+            self.db.add(paper)
+            await self.db.flush()  # 获取 paper.id
+
+            exam.paper_id = paper.id
+            await self.db.flush()
+
+        # 创建题目
+        question_type = question_data.get("type", "single")
+        try:
+            q_type = QuestionType(question_type)
+        except ValueError:
+            q_type = QuestionType.SINGLE
+
+        question = Question(
+            type=q_type,
+            stem=question_data.get("stem", ""),
+            options=question_data.get("options"),
+            answer=question_data.get("answer"),
+            explanation=question_data.get("explanation"),
+            difficulty=question_data.get("difficulty", 3),
+            knowledge_point=question_data.get("knowledge_point"),
+            created_by=teacher_id,
+        )
+        self.db.add(question)
+        await self.db.flush()
+
+        # 获取当前题目数量确定顺序
+        count_query = (
+            select(func.count(PaperQuestion.id))
+            .where(PaperQuestion.paper_id == exam.paper_id)
+        )
+        count_result = await self.db.execute(count_query)
+        order = (count_result.scalar() or 0) + 1
+
+        # 关联到试卷
+        paper_question = PaperQuestion(
+            paper_id=exam.paper_id,
+            question_id=question.id,
+            order=order,
+            score=question_data.get("score", 10),
+        )
+        self.db.add(paper_question)
+
+        await self.db.commit()
+        await self.db.refresh(question)
+
+        return question
+
+    async def remove_question_from_exam(
+        self,
+        exam_id: int,
+        question_id: int,
+        teacher_id: int
+    ) -> bool:
+        """从考试中移除题目"""
+        exam = await self.get_exam(exam_id)
+        if not exam or exam.published_by != teacher_id:
+            return False
+
+        if exam.status != ExamStatus.DRAFT:
+            return False
+
+        if not exam.paper_id:
+            return False
+
+        # 删除试卷题目关联
+        query = (
+            select(PaperQuestion)
+            .where(
+                PaperQuestion.paper_id == exam.paper_id,
+                PaperQuestion.question_id == question_id
+            )
+        )
+        result = await self.db.execute(query)
+        pq = result.scalar_one_or_none()
+
+        if not pq:
+            return False
+
+        await self.db.delete(pq)
+        await self.db.commit()
+        return True
+
+    async def get_exam_questions(self, exam_id: int) -> List[dict]:
+        """获取考试的所有题目"""
+        exam = await self.get_exam(exam_id)
+        if not exam or not exam.paper_id:
+            return []
+
+        query = (
+            select(PaperQuestion)
+            .options(selectinload(PaperQuestion.question))
+            .where(PaperQuestion.paper_id == exam.paper_id)
+            .order_by(PaperQuestion.order)
+        )
+        result = await self.db.execute(query)
+        paper_questions = list(result.scalars().all())
+
+        questions = []
+        for pq in paper_questions:
+            q = pq.question
+            questions.append({
+                "id": q.id,
+                "type": q.type.value if hasattr(q.type, 'value') else q.type,
+                "stem": q.stem,
+                "options": q.options,
+                "answer": q.answer,
+                "explanation": q.explanation,
+                "score": pq.score,
+                "difficulty": q.difficulty,
+                "knowledge_point": q.knowledge_point,
+            })
+
+        return questions
+

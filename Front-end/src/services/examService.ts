@@ -193,3 +193,66 @@ export async function getExamAttempts(
     );
     return handleResponse<AttemptListResponse>(response);
 }
+
+// ===================================
+// 题目管理
+// ===================================
+
+export interface AddQuestionRequest {
+    type: 'single' | 'multiple' | 'blank' | 'short';
+    stem: string;
+    options?: Record<string, string>;
+    answer: unknown;
+    explanation?: string;
+    score?: number;
+    difficulty?: number;
+    knowledge_point?: string;
+}
+
+/**
+ * 添加题目到考试
+ */
+export async function addQuestionToExam(
+    examId: number,
+    data: AddQuestionRequest
+): Promise<{ id: number; message: string }> {
+    const response = await fetch(`${API_BASE}/exams/${examId}/questions`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+}
+
+/**
+ * 从考试中删除题目
+ */
+export async function removeQuestionFromExam(
+    examId: number,
+    questionId: number
+): Promise<void> {
+    const response = await fetch(
+        `${API_BASE}/exams/${examId}/questions/${questionId}`,
+        {
+            method: 'DELETE',
+            headers: getHeaders(),
+        }
+    );
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: '删除失败' }));
+        throw new Error(error.detail);
+    }
+}
+
+/**
+ * 获取考试题目列表
+ */
+export async function getExamQuestions(
+    examId: number
+): Promise<{ questions: unknown[]; total: number }> {
+    const response = await fetch(`${API_BASE}/exams/${examId}/questions`, {
+        headers: getHeaders(),
+    });
+    return handleResponse(response);
+}
+

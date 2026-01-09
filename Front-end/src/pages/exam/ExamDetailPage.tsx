@@ -6,7 +6,6 @@
 import React, { useEffect, useState } from 'react';
 import {
     ArrowLeft,
-    Save,
     Play,
     Pause,
     Clock,
@@ -170,10 +169,10 @@ export const ExamDetailPage: React.FC<ExamDetailPageProps> = ({
                                 </span>
                                 <span
                                     className={`px-2 py-0.5 rounded-full text-xs font-medium ${isDraft
-                                            ? 'bg-gray-100 text-gray-600'
-                                            : isPublished
-                                                ? 'bg-green-100 text-green-600'
-                                                : 'bg-red-100 text-red-600'
+                                        ? 'bg-gray-100 text-gray-600'
+                                        : isPublished
+                                            ? 'bg-green-100 text-green-600'
+                                            : 'bg-red-100 text-red-600'
                                         }`}
                                 >
                                     {isDraft ? '草稿' : isPublished ? '进行中' : '已结束'}
@@ -364,28 +363,67 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
     onClose,
     onSuccess,
 }) => {
-    const [questionType, setQuestionType] = useState('single');
+    const [questionType, setQuestionType] = useState<'single' | 'multiple' | 'blank' | 'short'>('single');
     const [stem, setStem] = useState('');
     const [options, setOptions] = useState({ A: '', B: '', C: '', D: '' });
     const [answer, setAnswer] = useState('A');
+    const [explanation, setExplanation] = useState('');
     const [score, setScore] = useState(10);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState('');
 
     const handleSubmit = async () => {
         if (!stem.trim()) {
-            alert('请输入题目内容');
+            setError('请输入题目内容');
             return;
         }
 
+        // 验证选项（选择题）
+        if (questionType === 'single' || questionType === 'multiple') {
+            const filledOptions = Object.values(options).filter(v => v.trim());
+            if (filledOptions.length < 2) {
+                setError('请至少填写2个选项');
+                return;
+            }
+        }
+
         setIsSubmitting(true);
+        setError('');
+
         try {
-            // TODO: 调用 API 添加题目
-            // 目前后端还没有直接添加题目到考试的 API
-            // 需要先创建试卷，再关联到考试
-            alert('功能开发中：需要先实现题库管理功能');
-            onClose();
-        } catch (error) {
-            console.error('添加题目失败:', error);
+            // 构建答案对象
+            let answerData: unknown;
+            if (questionType === 'single') {
+                answerData = { correct: answer };
+            } else if (questionType === 'multiple') {
+                answerData = { correct: answer.split(',').map(a => a.trim()) };
+            } else if (questionType === 'blank') {
+                answerData = { blanks: answer.split('|').map(a => a.trim()) };
+            } else {
+                answerData = { points: explanation || answer };
+            }
+
+            // 过滤空选项
+            const filteredOptions: Record<string, string> = {};
+            Object.entries(options).forEach(([key, value]) => {
+                if (value.trim()) {
+                    filteredOptions[key] = value;
+                }
+            });
+
+            const { addQuestionToExam } = await import('@/services/examService');
+            await addQuestionToExam(examId, {
+                type: questionType,
+                stem: stem,
+                options: (questionType === 'single' || questionType === 'multiple') ? filteredOptions : undefined,
+                answer: answerData,
+                explanation: explanation || undefined,
+                score: score,
+            });
+
+            onSuccess();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : '添加失败');
         } finally {
             setIsSubmitting(false);
         }
@@ -407,7 +445,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                         <label className="block text-sm font-medium text-gray-700 mb-2">题目类型</label>
                         <select
                             value={questionType}
-                            onChange={e => setQuestionType(e.target.value)}
+                            onChange={e => setQuestionType(e.target.value as 'single' | 'multiple' | 'blank' | 'short')}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg"
                         >
                             <option value="single">单选题</option>
@@ -479,6 +517,25 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg"
                         />
                     </div>
+
+                    {/* 解析 */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">解析（可选）</label>
+                        <textarea
+                            value={explanation}
+                            onChange={e => setExplanation(e.target.value)}
+                            rows={2}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                            placeholder="题目解析..."
+                        />
+                    </div>
+
+                    {/* 错误提示 */}
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-sm">
+                            {error}
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-4 border-t border-gray-200 flex justify-end gap-3">

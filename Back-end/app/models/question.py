@@ -70,10 +70,10 @@ class Question(Base, TimestampMixin):
     difficulty: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     score: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
 
-    course_id: Mapped[int] = mapped_column(
+    course_id: Mapped[Optional[int]] = mapped_column(
         Integer,
-        ForeignKey("courses.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("courses.id", ondelete="SET NULL"),
+        nullable=True,  # 允许进行组卷时不关联课程
     )
     knowledge_point_id: Mapped[Optional[int]] = mapped_column(
         Integer,
@@ -131,10 +131,10 @@ class Paper(Base, TimestampMixin):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     total_score: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
 
-    course_id: Mapped[int] = mapped_column(
+    course_id: Mapped[Optional[int]] = mapped_column(
         Integer,
-        ForeignKey("courses.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("courses.id", ondelete="SET NULL"),
+        nullable=True,  # 允许直接创建试卷不关联课程
     )
     created_by: Mapped[int] = mapped_column(
         Integer,

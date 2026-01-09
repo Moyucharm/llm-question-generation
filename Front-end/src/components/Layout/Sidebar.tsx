@@ -6,6 +6,7 @@ import React from 'react';
 import {
   Home,
   Sparkles,
+  BookOpen,
   FileText,
   ClipboardList,
   BarChart2,
@@ -19,8 +20,9 @@ import { SidebarItem } from './SidebarItem';
 const menuItems = [
   { icon: Home, label: '仪表板', path: 'dashboard', enabled: true },
   { icon: Sparkles, label: 'AI出题', path: 'generation', enabled: true },
-  { icon: FileText, label: '题库管理', path: 'question-bank', enabled: true },
+  { icon: BookOpen, label: '课程管理', path: 'courses', enabled: true },
   { icon: ClipboardList, label: '考试管理', path: 'exams', enabled: true },
+  { icon: FileText, label: '题库管理', path: 'question-bank', enabled: false, badge: '待实现' },
   { icon: BarChart2, label: '学习分析', path: 'analytics', enabled: false, badge: '即将推出' },
   { icon: History, label: '历史记录', path: 'history', enabled: false, badge: '即将推出' },
 ];

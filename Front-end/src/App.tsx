@@ -141,7 +141,7 @@ function App() {
               </button>
             </div>
           </div>
-        ) : currentPage === 'question-bank' ? (
+        ) : currentPage === 'courses' ? (
           <CourseManagementPage />
         ) : currentPage === 'exams' ? (
           <ExamListPage onNavigate={handlePageChange} />

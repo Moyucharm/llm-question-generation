@@ -488,3 +488,78 @@ async def get_exam_attempts(
     ]
 
     return AttemptListResponse(items=items, total=total)
+
+
+# ===================================
+# Question Management (Teacher)
+# ===================================
+
+@router.post("/{exam_id}/questions", status_code=status.HTTP_201_CREATED)
+async def add_question_to_exam(
+    exam_id: int,
+    data: dict,  # QuestionAdd schema
+    current_user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+):
+    """添加题目到考试（教师）"""
+    service = ExamService(db)
+    question = await service.add_question_to_exam(
+        exam_id, data, current_user.id
+    )
+
+    if not question:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无法添加题目，考试不存在、无权限或已发布"
+        )
+
+    return {
+        "id": question.id,
+        "type": question.type.value if hasattr(question.type, 'value') else question.type,
+        "stem": question.stem,
+        "options": question.options,
+        "answer": question.answer,
+        "explanation": question.explanation,
+        "score": data.get("score", 10),
+        "message": "题目添加成功"
+    }
+
+
+@router.delete("/{exam_id}/questions/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_question_from_exam(
+    exam_id: int,
+    question_id: int,
+    current_user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+):
+    """从考试中移除题目（教师）"""
+    service = ExamService(db)
+    success = await service.remove_question_from_exam(
+        exam_id, question_id, current_user.id
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无法移除题目"
+        )
+
+
+@router.get("/{exam_id}/questions")
+async def get_exam_questions(
+    exam_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取考试题目列表"""
+    service = ExamService(db)
+    questions = await service.get_exam_questions(exam_id)
+
+    # 学生不能看到答案
+    if current_user.role.value != "teacher":
+        for q in questions:
+            q.pop("answer", None)
+            q.pop("explanation", None)
+
+    return {"questions": questions, "total": len(questions)}
+

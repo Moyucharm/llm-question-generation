@@ -169,3 +169,36 @@ class ExamQuestionView(BaseModel):
     score: int = 10
     # 学生答案（如果有）
     student_answer: Optional[Any] = None
+
+
+# ===================================
+# Question Management
+# ===================================
+
+class QuestionAdd(BaseModel):
+    """Add question to exam"""
+    type: str = Field(..., description="题目类型: single/multiple/blank/short")
+    stem: str = Field(..., min_length=1, description="题干")
+    options: Optional[dict] = Field(None, description="选项 (选择题)")
+    answer: Any = Field(..., description="正确答案")
+    explanation: Optional[str] = Field(None, description="解析")
+    score: int = Field(10, ge=1, le=100, description="分值")
+    difficulty: int = Field(3, ge=1, le=5, description="难度")
+    knowledge_point: Optional[str] = Field(None, description="知识点")
+
+
+class QuestionResponse(BaseModel):
+    """Question response"""
+    id: int
+    type: str
+    stem: str
+    options: Optional[dict] = None
+    answer: Optional[Any] = None
+    explanation: Optional[str] = None
+    score: int = 10
+    difficulty: int = 3
+    knowledge_point: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
