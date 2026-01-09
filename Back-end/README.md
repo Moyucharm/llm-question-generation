@@ -444,6 +444,69 @@ curl http://localhost:8000/api/questions/types
 
 </details>
 
+### 考试管理模块 (`/api/exams`) ✅
+
+| 方法 | 路径 | 说明 | 认证 | 角色 |
+|------|------|------|------|------|
+| POST | `/api/exams` | 创建考试 | 是 | 教师 |
+| GET | `/api/exams` | 获取考试列表 | 是 | 全部 |
+| GET | `/api/exams/{id}` | 获取考试详情 | 是 | 全部 |
+| PUT | `/api/exams/{id}` | 更新考试 | 是 | 教师 |
+| DELETE | `/api/exams/{id}` | 删除考试 | 是 | 教师 |
+| POST | `/api/exams/{id}/publish` | 发布考试 | 是 | 教师 |
+| POST | `/api/exams/{id}/close` | 关闭考试 | 是 | 教师 |
+| POST | `/api/exams/{id}/questions` | 添加题目到考试 | 是 | 教师 |
+| GET | `/api/exams/{id}/questions` | 获取考试题目 | 是 | 全部 |
+| DELETE | `/api/exams/{id}/questions/{qid}` | 删除题目 | 是 | 教师 |
+| POST | `/api/exams/{id}/start` | 开始考试 | 是 | 学生 |
+| GET | `/api/exams/{id}/attempt` | 获取答题记录 | 是 | 学生 |
+| POST | `/api/exams/{id}/answer` | 保存答案 | 是 | 学生 |
+| POST | `/api/exams/{id}/submit` | 提交考试 | 是 | 学生 |
+| GET | `/api/exams/{id}/attempts` | 查看所有答题记录 | 是 | 教师 |
+
+<details>
+<summary>📝 考试管理API示例</summary>
+
+**创建考试**
+```bash
+curl -X POST http://localhost:8000/api/exams \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Python期末考试",
+    "duration_minutes": 90
+  }'
+```
+
+**添加题目到考试**
+```bash
+curl -X POST http://localhost:8000/api/exams/1/questions \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "single",
+    "stem": "Python中哪个关键字用于定义函数？",
+    "options": {"A": "def", "B": "function", "C": "func", "D": "define"},
+    "answer": {"correct": "A"},
+    "score": 10
+  }'
+```
+
+**响应示例**
+```json
+{
+  "id": 1,
+  "type": "single",
+  "stem": "Python中哪个关键字用于定义函数？",
+  "options": {"A": "def", "B": "function", "C": "func", "D": "define"},
+  "answer": {"correct": "A"},
+  "score": 10,
+  "message": "题目添加成功"
+}
+```
+
+</details>
+
 ### 待实现的 API 🚧
 
 | 模块 | 前缀 | 状态 |
