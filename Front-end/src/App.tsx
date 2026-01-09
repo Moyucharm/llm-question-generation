@@ -11,7 +11,7 @@ import { DashboardLayout } from '@/components/Layout';
 import { LoadingScreen } from '@/components/UI';
 import { LoginPage, RegisterPage } from '@/pages/auth';
 import { CourseManagementPage } from '@/pages/course/CourseManagementPage';
-import { ExamListPage, CreateExamPage, ExamDetailPage } from '@/pages/exam';
+import { ExamListPage, CreateExamPage, ExamDetailPage, TakeExamPage } from '@/pages/exam';
 
 /**
  * 主应用组件
@@ -149,6 +149,8 @@ function App() {
           <CreateExamPage onNavigate={handlePageChange} />
         ) : currentPage === 'exam-detail' && currentExamId ? (
           <ExamDetailPage examId={currentExamId} onNavigate={handlePageChange} />
+        ) : currentPage === 'exam-take' && currentExamId ? (
+          <TakeExamPage examId={currentExamId} onNavigate={handlePageChange} />
         ) : (
           // AI出题页面 - 使用现有的状态路由
           <>

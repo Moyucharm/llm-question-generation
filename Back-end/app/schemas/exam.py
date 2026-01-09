@@ -61,8 +61,9 @@ class ExamResponse(ExamBase):
     published_by: int
     publisher_name: Optional[str] = None
     question_count: int = 0
-    total_score: int = 0
+    total_score: Optional[int] = 0  # 可能为 None，默认 0
     attempt_count: int = 0  # 参加人数
+    attempt_status: Optional[str] = None  # 学生: in_progress, graded, submitted
     created_at: datetime
     updated_at: datetime
 

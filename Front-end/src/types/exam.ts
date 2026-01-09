@@ -22,6 +22,7 @@ export interface Exam {
     question_count: number;
     total_score: number;
     attempt_count: number;
+    attempt_status?: AttemptStatus; // 学生: 答题状态
     created_at: string;
     updated_at: string;
 }

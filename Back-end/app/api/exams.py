@@ -117,6 +117,7 @@ async def get_exams(
                 question_count=question_count,
                 total_score=attempt.total_score if attempt else 0,
                 attempt_count=1 if attempt else 0,
+                attempt_status=attempt.status.value if attempt else None,
                 created_at=exam.created_at,
                 updated_at=exam.updated_at,
             ))
@@ -318,7 +319,11 @@ async def start_exam(
     exam = await service.get_exam(exam_id)
     remaining = None
     if exam and attempt.status == AttemptStatus.IN_PROGRESS:
-        elapsed = (datetime.now(timezone.utc) - attempt.started_at).total_seconds()
+        # 确保时间都有时区信息
+        started = attempt.started_at
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
+        elapsed = (datetime.now(timezone.utc) - started).total_seconds()
         remaining = max(0, exam.duration_minutes * 60 - int(elapsed))
 
     return AttemptResponse(
@@ -355,7 +360,11 @@ async def get_current_attempt(
     exam = await service.get_exam(exam_id)
     remaining = None
     if exam and attempt.status == AttemptStatus.IN_PROGRESS:
-        elapsed = (datetime.now(timezone.utc) - attempt.started_at).total_seconds()
+        # 确保时间都有时区信息
+        started = attempt.started_at
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
+        elapsed = (datetime.now(timezone.utc) - started).total_seconds()
         remaining = max(0, exam.duration_minutes * 60 - int(elapsed))
 
     answers = [

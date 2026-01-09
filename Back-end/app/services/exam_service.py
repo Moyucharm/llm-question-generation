@@ -116,10 +116,17 @@ class ExamService:
             attempt = attempts.get(exam.id)
             can_start = True
 
-            # 检查时间限制
-            if exam.start_time and now < exam.start_time:
+            # 检查时间限制 - 确保时区一致
+            start_time = exam.start_time
+            end_time = exam.end_time
+            if start_time and start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+            if end_time and end_time.tzinfo is None:
+                end_time = end_time.replace(tzinfo=timezone.utc)
+            
+            if start_time and now < start_time:
                 can_start = False
-            if exam.end_time and now > exam.end_time:
+            if end_time and now > end_time:
                 can_start = False
 
             exam_views.append({
@@ -151,8 +158,16 @@ class ExamService:
     async def get_exam_with_questions(self, exam_id: int) -> Optional[dict]:
         """获取考试及其题目"""
         exam = await self.get_exam(exam_id)
-        if not exam or not exam.paper_id:
+        if not exam:
             return None
+
+        # 如果没有试卷，返回空题目列表
+        if not exam.paper_id:
+            return {
+                "exam": exam,
+                "questions": [],
+                "total_score": 0,
+            }
 
         # 获取试卷题目
         query = (

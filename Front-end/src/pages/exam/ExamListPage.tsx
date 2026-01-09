@@ -162,7 +162,13 @@ export const ExamListPage: React.FC<ExamListPageProps> = ({ onNavigate }) => {
                             key={exam.id}
                             exam={exam}
                             isTeacher={isTeacher}
-                            onView={() => onNavigate?.('exam-detail', exam.id)}
+                            onView={() => {
+                                if (isTeacher) {
+                                    onNavigate?.('exam-detail', exam.id);
+                                } else if (exam.status === 'published') {
+                                    onNavigate?.('exam-take', exam.id);
+                                }
+                            }}
                             onPublish={() => handlePublish(exam.id)}
                             onClose={() => handleClose(exam.id)}
                             onDelete={() => handleDelete(exam.id)}
@@ -290,14 +296,24 @@ const ExamCard: React.FC<ExamCardProps> = ({
                     ) : (
                         // 学生操作
                         <>
-                            {exam.status === 'published' && exam.attempt_count === 0 && (
-                                <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                                    <Play className="w-4 h-4" />
-                                    开始考试
-                                </button>
-                            )}
-                            {exam.attempt_count > 0 && (
-                                <span className="text-sm text-green-600 font-medium">已完成</span>
+                            {exam.status === 'published' && (
+                                exam.attempt_status === 'graded' || exam.attempt_status === 'submitted' ? (
+                                    <span className="text-sm text-green-600 font-medium flex items-center gap-1">
+                                        <CheckCircle className="w-4 h-4" />
+                                        已完成
+                                    </span>
+                                ) : (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onView?.();
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                    >
+                                        <Play className="w-4 h-4" />
+                                        {exam.attempt_status === 'in_progress' ? '继续考试' : '开始考试'}
+                                    </button>
+                                )
                             )}
                         </>
                     )}

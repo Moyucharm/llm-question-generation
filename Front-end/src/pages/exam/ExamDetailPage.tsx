@@ -42,6 +42,8 @@ export const ExamDetailPage: React.FC<ExamDetailPageProps> = ({
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState<UpdateExamRequest>({});
     const [showAddQuestion, setShowAddQuestion] = useState(false);
+    const [confirmAction, setConfirmAction] = useState<'publish' | 'close' | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
         fetchExam(examId);
@@ -70,26 +72,34 @@ export const ExamDetailPage: React.FC<ExamDetailPageProps> = ({
     // 发布考试
     const handlePublish = async () => {
         if (!currentExam?.questions?.length) {
-            alert('请先添加题目再发布考试');
+            setErrorMessage('请先添加题目再发布考试');
             return;
         }
-        if (!confirm('确定要发布此考试吗？发布后学生将可以参加。')) return;
+        setConfirmAction('publish');
+    };
+
+    const doPublish = async () => {
+        setConfirmAction(null);
         try {
             await publishExam(examId);
             await fetchExam(examId);
         } catch (e) {
-            // 错误由 store 处理
+            setErrorMessage(e instanceof Error ? e.message : '发布失败');
         }
     };
 
     // 关闭考试
     const handleClose = async () => {
-        if (!confirm('确定要关闭此考试吗？')) return;
+        setConfirmAction('close');
+    };
+
+    const doClose = async () => {
+        setConfirmAction(null);
         try {
             await closeExam(examId);
             await fetchExam(examId);
         } catch (e) {
-            // 错误由 store 处理
+            setErrorMessage(e instanceof Error ? e.message : '关闭失败');
         }
     };
 
@@ -297,6 +307,55 @@ export const ExamDetailPage: React.FC<ExamDetailPageProps> = ({
                         fetchExam(examId);
                     }}
                 />
+            )}
+
+            {/* 确认弹窗 */}
+            {confirmAction && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            {confirmAction === 'publish' ? '确认发布' : '确认关闭'}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                            {confirmAction === 'publish'
+                                ? '发布后学生将可以参加考试。确定要发布吗？'
+                                : '关闭后学生将无法继续答题。确定要关闭吗？'}
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setConfirmAction(null)}
+                                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={confirmAction === 'publish' ? doPublish : doClose}
+                                className={`px-4 py-2 text-white rounded-lg ${confirmAction === 'publish'
+                                        ? 'bg-green-600 hover:bg-green-700'
+                                        : 'bg-red-600 hover:bg-red-700'
+                                    }`}
+                            >
+                                确认
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 错误提示 */}
+            {errorMessage && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 text-center">
+                        <X className="w-12 h-12 text-red-600 mx-auto mb-4" />
+                        <p className="text-lg font-medium text-gray-900 mb-4">{errorMessage}</p>
+                        <button
+                            onClick={() => setErrorMessage(null)}
+                            className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+                        >
+                            关闭
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );
