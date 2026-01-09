@@ -33,7 +33,7 @@ const statusLabels: Record<ExamStatus, string> = {
 };
 
 interface ExamListPageProps {
-    onNavigate?: (page: string) => void;
+    onNavigate?: (page: string, examId?: number) => void;
 }
 
 export const ExamListPage: React.FC<ExamListPageProps> = ({ onNavigate }) => {
@@ -162,6 +162,7 @@ export const ExamListPage: React.FC<ExamListPageProps> = ({ onNavigate }) => {
                             key={exam.id}
                             exam={exam}
                             isTeacher={isTeacher}
+                            onView={() => onNavigate?.('exam-detail', exam.id)}
                             onPublish={() => handlePublish(exam.id)}
                             onClose={() => handleClose(exam.id)}
                             onDelete={() => handleDelete(exam.id)}
@@ -178,6 +179,7 @@ export const ExamListPage: React.FC<ExamListPageProps> = ({ onNavigate }) => {
 interface ExamCardProps {
     exam: Exam;
     isTeacher: boolean;
+    onView: () => void;
     onPublish: () => void;
     onClose: () => void;
     onDelete: () => void;
@@ -187,6 +189,7 @@ interface ExamCardProps {
 const ExamCard: React.FC<ExamCardProps> = ({
     exam,
     isTeacher,
+    onView,
     onPublish,
     onClose,
     onDelete,
@@ -195,10 +198,12 @@ const ExamCard: React.FC<ExamCardProps> = ({
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between">
-                <div className="flex-1">
+                <div className="flex-1 cursor-pointer" onClick={onView}>
                     {/* 标题和状态 */}
                     <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">{exam.title}</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 hover:text-blue-600">
+                            {exam.title}
+                        </h3>
                         <span
                             className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[exam.status]}`}
                         >

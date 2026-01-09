@@ -11,7 +11,7 @@ import { DashboardLayout } from '@/components/Layout';
 import { LoadingScreen } from '@/components/UI';
 import { LoginPage, RegisterPage } from '@/pages/auth';
 import { CourseManagementPage } from '@/pages/course/CourseManagementPage';
-import { ExamListPage, CreateExamPage } from '@/pages/exam';
+import { ExamListPage, CreateExamPage, ExamDetailPage } from '@/pages/exam';
 
 /**
  * 主应用组件
@@ -25,6 +25,7 @@ function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [authPage, setAuthPage] = useState<'login' | 'register'>('login');
   const [currentPage, setCurrentPage] = useState('generation');
+  const [currentExamId, setCurrentExamId] = useState<number | null>(null);
 
   // 初始化认证状态
   useEffect(() => {
@@ -90,10 +91,13 @@ function App() {
   }, [nextQuestion, previousQuestion, submitQuiz, startGrading, toggleVisibility, showHelp, user]);
 
   // 处理页面切换
-  const handlePageChange = (page: string) => {
+  const handlePageChange = (page: string, examId?: number) => {
     setCurrentPage(page);
-    // 如果切换到非 generation 页面，可以在这里处理
-    // 目前只支持 dashboard 和 generation
+    if (examId) {
+      setCurrentExamId(examId);
+    } else if (!page.startsWith('exam-detail')) {
+      setCurrentExamId(null);
+    }
   };
 
   // 加载中状态
@@ -143,6 +147,8 @@ function App() {
           <ExamListPage onNavigate={handlePageChange} />
         ) : currentPage === 'exam-create' ? (
           <CreateExamPage onNavigate={handlePageChange} />
+        ) : currentPage === 'exam-detail' && currentExamId ? (
+          <ExamDetailPage examId={currentExamId} onNavigate={handlePageChange} />
         ) : (
           // AI出题页面 - 使用现有的状态路由
           <>
