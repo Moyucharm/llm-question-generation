@@ -46,6 +46,54 @@ const typeColors: Record<string, string> = {
     short: 'bg-teal-100 text-teal-700',
 };
 
+const extractFilename = (contentDisposition: string | null): string | null => {
+    if (!contentDisposition) {
+        return null;
+    }
+
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match && utf8Match[1]) {
+        try {
+            return decodeURIComponent(utf8Match[1]);
+        } catch {
+            return utf8Match[1];
+        }
+    }
+
+    const asciiMatch = contentDisposition.match(/filename="?([^\";]+)"?/i);
+    return asciiMatch ? asciiMatch[1] : null;
+};
+
+const normalizeFilename = (filename: string): string => {
+    const sanitized = filename.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim();
+    if (!sanitized) {
+        return `questions_export_${Date.now()}.json`;
+    }
+    return sanitized.toLowerCase().endsWith('.json') ? sanitized : `${sanitized}.json`;
+};
+
+const saveBlobAsFile = (blob: Blob, filename: string) => {
+    const msSaveOrOpenBlob = (navigator as Navigator & {
+        msSaveOrOpenBlob?: (blob: Blob, defaultName?: string) => boolean;
+    }).msSaveOrOpenBlob;
+
+    if (msSaveOrOpenBlob) {
+        msSaveOrOpenBlob(blob, filename);
+        return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 export const QuestionBankPage: React.FC = () => {
     // 列表数据
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -159,25 +207,16 @@ export const QuestionBankPage: React.FC = () => {
 
             // 从响应头获取文件名
             const contentDisposition = response.headers.get('Content-Disposition');
-            let filename = `questions_export_${Date.now()}.json`;
-            if (contentDisposition) {
-                const match = contentDisposition.match(/filename="?([^"]+)"?/);
-                if (match) {
-                    filename = match[1];
-                }
-            }
+            let filename = extractFilename(contentDisposition) || `questions_export_${Date.now()}.json`;
+            filename = normalizeFilename(filename);
 
             // 获取 Blob 并下载
             const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const finalBlob =
+                blob.type && blob.type !== 'application/octet-stream'
+                    ? blob
+                    : new Blob([blob], { type: 'application/json' });
+            saveBlobAsFile(finalBlob, filename);
 
             alert(`成功导出题目！文件名: ${filename}`);
         } catch (err) {

@@ -6,6 +6,7 @@ Question Bank API
 
 from typing import Optional
 from datetime import datetime
+from urllib.parse import quote
 import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -273,6 +274,7 @@ async def export_questions(
 
     # 生成文件名
     filename = f"questions_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    encoded_filename = quote(filename)
     
     # 返回文件下载响应
     json_content = json.dumps(questions, ensure_ascii=False, indent=2)
@@ -281,7 +283,9 @@ async def export_questions(
         content=json_content,
         media_type="application/json",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": (
+                f'attachment; filename="{filename}"; filename*=UTF-8\'\'{encoded_filename}'
+            ),
             "Content-Type": "application/json; charset=utf-8",
         }
     )
