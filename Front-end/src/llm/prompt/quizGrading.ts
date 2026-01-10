@@ -35,20 +35,6 @@ const GRADING_INSTRUCTIONS = {
     scoring:
       '满分10分，根据答案质量给分：优秀(9-10分)、良好(7-8分)、一般(5-6分)、较差(1-4分)、未答(0分)',
   },
-  'code-output': {
-    name: '代码输出题',
-    instruction:
-      '对于代码输出题，严格比较用户答案与正确输出，注意格式、换行、空格等细节。',
-    scoring:
-      '满分10分，输出完全正确得10分，格式有小问题得8分，部分正确得5分，完全错误得0分',
-  },
-  'code-writing': {
-    name: '代码编写题',
-    instruction:
-      '对于代码编写题，评估代码的正确性、逻辑性、代码风格。即使实现方式不同，只要逻辑正确就应该给分。',
-    scoring:
-      '满分10分，功能完全正确且代码优雅(9-10分)、功能正确但代码一般(7-8分)、部分功能正确(5-6分)、逻辑有问题(1-4分)、未答或完全错误(0分)',
-  },
 } as const;
 
 /**
@@ -103,18 +89,6 @@ function generateQuestionDetails(question: Question): string {
     case 'short-answer':
       details += `参考答案: ${question.referenceAnswer}\n`;
       details += `用户答案: ${question.userAnswer || '未作答'}\n`;
-      break;
-
-    case 'code-output':
-      details += `代码:\n${question.code}\n`;
-      details += `正确输出: ${question.correctOutput}\n`;
-      details += `用户答案: ${question.userAnswer || '未作答'}\n`;
-      break;
-
-    case 'code-writing':
-      details += `编程语言: ${question.language}\n`;
-      details += `参考代码:\n${question.referenceCode}\n`;
-      details += `用户代码:\n${question.userAnswer || '未作答'}\n`;
       break;
   }
 

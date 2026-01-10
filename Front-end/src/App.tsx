@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppRouter } from '@/router/AppRouter';
 import { LogPanelProvider } from '@/components/LogPanel/LogPanelProvider';
 import { useAppStore } from '@/stores/useAppStore';
@@ -11,7 +11,12 @@ import { DashboardLayout } from '@/components/Layout';
 import { LoadingScreen } from '@/components/UI';
 import { LoginPage, RegisterPage } from '@/pages/auth';
 import { CourseManagementPage } from '@/pages/course/CourseManagementPage';
-import { ExamListPage, CreateExamPage, ExamDetailPage, TakeExamPage } from '@/pages/exam';
+import {
+  ExamListPage,
+  CreateExamPage,
+  ExamDetailPage,
+  TakeExamPage,
+} from '@/pages/exam';
 import { QuestionBankPage } from '@/pages/question-bank';
 
 /**
@@ -19,13 +24,19 @@ import { QuestionBankPage } from '@/pages/question-bank';
  * QGen - AI智能出题系统
  */
 function App() {
-  const { generation, nextQuestion, previousQuestion, submitQuiz, startGrading } = useAppStore();
-  const { user, isLoading, isInitialized, initialize, logout } = useAuthStore();
+  const {
+    generation,
+    nextQuestion,
+    previousQuestion,
+    submitQuiz,
+    startGrading,
+  } = useAppStore();
+  const { user, isInitialized, initialize, logout } = useAuthStore();
   const { toggleVisibility } = useLogStore();
 
   const [showHelp, setShowHelp] = useState(false);
   const [authPage, setAuthPage] = useState<'login' | 'register'>('login');
-  const [currentPage, setCurrentPage] = useState('generation');
+  const [currentPage, setCurrentPage] = useState('dashboard');
   const [currentExamId, setCurrentExamId] = useState<number | null>(null);
 
   // 初始化认证状态
@@ -89,29 +100,196 @@ function App() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [nextQuestion, previousQuestion, submitQuiz, startGrading, toggleVisibility, showHelp, user]);
+  }, [
+    nextQuestion,
+    previousQuestion,
+    submitQuiz,
+    startGrading,
+    toggleVisibility,
+    showHelp,
+    user,
+  ]);
 
-  // 处理页面切换
-  const handlePageChange = (page: string, examId?: number) => {
-    setCurrentPage(page);
-    if (examId) {
-      setCurrentExamId(examId);
-    } else if (!page.startsWith('exam-detail')) {
-      setCurrentExamId(null);
+  const setPathname = (pathname: string, replace = false) => {
+    if (window.location.pathname === pathname) return;
+    if (replace) {
+      window.history.replaceState(null, '', pathname);
+    } else {
+      window.history.pushState(null, '', pathname);
     }
   };
 
-  // 加载中状态
-  if (!isInitialized || isLoading) {
-    return <LoadingScreen message="正在加载..." />;
+  const getPathForPage = (page: string, examId: number | null) => {
+    switch (page) {
+      case 'dashboard':
+        return '/dashboard';
+      case 'generation':
+        return '/generation';
+      case 'courses':
+        return '/courses';
+      case 'question-bank':
+        return '/question-bank';
+      case 'exams':
+        return '/exams';
+      case 'exam-create':
+        return '/exams/create';
+      case 'exam-detail':
+        return examId ? `/exams/${examId}` : '/exams';
+      case 'exam-take':
+        return examId ? `/exams/${examId}/take` : '/exams';
+      default:
+        return '/dashboard';
+    }
+  };
+
+  const applyPathname = useCallback(
+    (pathname: string) => {
+      const clean = pathname.split('?')[0]?.split('#')[0] || '/';
+      const parts = clean.split('/').filter(Boolean);
+
+      if (parts.length === 0) {
+        if (user) {
+          setCurrentPage('dashboard');
+          setCurrentExamId(null);
+        } else {
+          setAuthPage('login');
+        }
+        return;
+      }
+
+      const [first, second, third] = parts;
+
+      if (first === 'login') {
+        setAuthPage('login');
+        return;
+      }
+      if (first === 'register') {
+        setAuthPage('register');
+        return;
+      }
+
+      if (first === 'dashboard') {
+        setCurrentPage('dashboard');
+        setCurrentExamId(null);
+        return;
+      }
+      if (first === 'generation' || first === 'quiz' || first === 'result') {
+        setCurrentPage('generation');
+        setCurrentExamId(null);
+        return;
+      }
+      if (first === 'courses') {
+        setCurrentPage('courses');
+        setCurrentExamId(null);
+        return;
+      }
+      if (first === 'question-bank') {
+        setCurrentPage('question-bank');
+        setCurrentExamId(null);
+        return;
+      }
+      if (first === 'exams') {
+        if (!second) {
+          setCurrentPage('exams');
+          setCurrentExamId(null);
+          return;
+        }
+        if (second === 'create') {
+          setCurrentPage('exam-create');
+          setCurrentExamId(null);
+          return;
+        }
+
+        const examId = Number(second);
+        if (!Number.isFinite(examId)) {
+          setCurrentPage('exams');
+          setCurrentExamId(null);
+          return;
+        }
+        setCurrentExamId(examId);
+        if (third === 'take') {
+          setCurrentPage('exam-take');
+        } else {
+          setCurrentPage('exam-detail');
+        }
+        return;
+      }
+
+      setCurrentPage('dashboard');
+      setCurrentExamId(null);
+    },
+    [user]
+  );
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    applyPathname(window.location.pathname);
+
+    const onPopState = () => applyPathname(window.location.pathname);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [applyPathname, isInitialized]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    const path = window.location.pathname;
+
+    if (!user) {
+      if (path !== '/login' && path !== '/register') {
+        setAuthPage('login');
+        setPathname('/login', true);
+      }
+      return;
+    }
+
+    if (path === '/' || path === '/login' || path === '/register') {
+      setCurrentPage('dashboard');
+      setCurrentExamId(null);
+      setPathname('/dashboard', true);
+    }
+  }, [isInitialized, user]);
+
+  // 处理页面切换
+  const handlePageChange = (page: string, examId?: number) => {
+    let nextExamId = currentExamId;
+
+    setCurrentPage(page);
+    if (typeof examId === 'number') {
+      nextExamId = examId;
+    } else if (!page.startsWith('exam-')) {
+      nextExamId = null;
+    }
+    setCurrentExamId(nextExamId);
+
+    setPathname(getPathForPage(page, nextExamId));
+  };
+
+  // 初始化加载中状态（仅用于启动时的 token 校验等）
+  if (!isInitialized) {
+    return <LoadingScreen message='正在加载...' />;
   }
 
   // 未登录：显示认证页面
   if (!user) {
     if (authPage === 'login') {
-      return <LoginPage onSwitchToRegister={() => setAuthPage('register')} />;
+      return (
+        <LoginPage
+          onSwitchToRegister={() => {
+            setAuthPage('register');
+            setPathname('/register');
+          }}
+        />
+      );
     }
-    return <RegisterPage onSwitchToLogin={() => setAuthPage('login')} />;
+    return (
+      <RegisterPage
+        onSwitchToLogin={() => {
+          setAuthPage('login');
+          setPathname('/login');
+        }}
+      />
+    );
   }
 
   // 已登录：显示仪表板布局
@@ -120,23 +298,25 @@ function App() {
       <DashboardLayout
         user={user}
         currentPage={currentPage}
-        onPageChange={handlePageChange}
-        onLogout={logout}
+        onPageChange={page => handlePageChange(page)}
+        onLogout={() => {
+          logout();
+          setAuthPage('login');
+          setPathname('/login', true);
+        }}
       >
         {/* 根据当前页面显示内容 */}
         {currentPage === 'dashboard' ? (
           // 仪表板首页 - 暂时显示欢迎信息
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <div className='max-w-4xl mx-auto'>
+            <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center'>
+              <h2 className='text-2xl font-bold text-gray-900 mb-2'>
                 欢迎回来，{user.name}！
               </h2>
-              <p className="text-gray-500 mb-6">
-                准备好开始智能出题了吗？
-              </p>
+              <p className='text-gray-500 mb-6'>准备好开始智能出题了吗？</p>
               <button
-                onClick={() => setCurrentPage('generation')}
-                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => handlePageChange('generation')}
+                className='px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors'
               >
                 开始 AI 出题
               </button>
@@ -151,7 +331,10 @@ function App() {
         ) : currentPage === 'exam-create' ? (
           <CreateExamPage onNavigate={handlePageChange} />
         ) : currentPage === 'exam-detail' && currentExamId ? (
-          <ExamDetailPage examId={currentExamId} onNavigate={handlePageChange} />
+          <ExamDetailPage
+            examId={currentExamId}
+            onNavigate={handlePageChange}
+          />
         ) : currentPage === 'exam-take' && currentExamId ? (
           <TakeExamPage examId={currentExamId} onNavigate={handlePageChange} />
         ) : (

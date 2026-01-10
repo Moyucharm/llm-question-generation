@@ -70,8 +70,6 @@ generation/
   - 多选题 (Multiple Choice)
   - 填空题 (Fill Blank)
   - 简答题 (Short Answer)
-  - 代码输出题 (Code Output)
-  - 代码编写题 (Code Writing)
 
 ### PresetModal - 预设选择模态框
 - **文件**: `./components/PresetModal.tsx`

@@ -64,7 +64,7 @@ export const QuizPage: React.FC = () => {
       const qid = quiz.questions[currentQuestionIndex]?.id ?? null;
       switchQuestion(qid);
     }
-  }, [currentQuestionIndex]);
+  }, [currentQuestionIndex, quiz, switchQuestion]);
 
   // 首次进入答题页时，启动答题计时
   useEffect(() => {
@@ -82,31 +82,31 @@ export const QuizPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className='max-w-4xl mx-auto'>
       {/* 页面头部卡片 */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6'>
+        <div className='flex items-center justify-between mb-4'>
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className='text-xl font-semibold text-gray-900'>
               {quiz.title || '在线答题'}
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className='text-sm text-gray-500 mt-1'>
               共 {quiz.questions.length} 题 · 已答 {answeredCount} 题
             </p>
           </div>
           <button
             onClick={resetApp}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className='flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors'
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className='w-4 h-4' />
             重新开始
           </button>
         </div>
 
         {/* 答题进度条 */}
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className='w-full bg-gray-200 rounded-full h-2'>
           <div
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            className='bg-blue-600 h-2 rounded-full transition-all duration-300'
             style={{
               width: `${(answeredCount / quiz.questions.length) * 100}%`,
             }}
@@ -118,21 +118,21 @@ export const QuizPage: React.FC = () => {
       <FloatingButton
         icon={Menu}
         onClick={() => setIsNavigationVisible(!isNavigationVisible)}
-        position="right"
-        color="bg-blue-600"
-        hoverColor="hover:bg-blue-700"
-        title="题目导航"
-        top="top-40"
+        position='right'
+        color='bg-blue-600'
+        hoverColor='hover:bg-blue-700'
+        title='题目导航'
+        top='top-40'
       />
 
       {/* 题目导航面板 */}
       <FloatingPanel
         isVisible={isNavigationVisible}
         onClose={() => setIsNavigationVisible(false)}
-        title="题目导航"
-        position="right"
-        top="top-72"
-        width="w-64"
+        title='题目导航'
+        position='right'
+        top='top-72'
+        width='w-64'
       >
         <QuizNavigation
           quiz={quiz}
@@ -146,7 +146,7 @@ export const QuizPage: React.FC = () => {
       </FloatingPanel>
 
       {/* 题目列表 */}
-      <div className="space-y-6">
+      <div className='space-y-6'>
         {quiz.questions.map((question, index) => (
           <div
             key={question.id}
@@ -155,7 +155,7 @@ export const QuizPage: React.FC = () => {
             }}
             onClick={() => goToQuestion(index)}
             style={{ scrollMarginTop: '100px', cursor: 'pointer' }}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 transition-all hover:shadow-md"
+            className='bg-white rounded-lg shadow-sm border border-gray-200 p-6 transition-all hover:shadow-md'
           >
             <QuestionRenderer
               question={question}
@@ -167,16 +167,18 @@ export const QuizPage: React.FC = () => {
         ))}
 
         {/* 提交按钮卡片 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-gray-600">
-              <CheckCircle2 className="w-5 h-5" />
-              <span>已完成 {answeredCount}/{quiz.questions.length} 题</span>
+        <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-6'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-3 text-gray-600'>
+              <CheckCircle2 className='w-5 h-5' />
+              <span>
+                已完成 {answeredCount}/{quiz.questions.length} 题
+              </span>
             </div>
             <button
               onClick={() => handleSubmitQuiz(quiz)}
               disabled={isSubmitted}
-              className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+              className='px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors'
             >
               {isSubmitted ? '已提交' : '提交试卷'}
             </button>

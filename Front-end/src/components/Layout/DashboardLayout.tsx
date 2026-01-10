@@ -12,6 +12,7 @@ import type { User } from '@/services/types';
 const pageTitles: Record<string, string> = {
   dashboard: '仪表板',
   generation: 'AI出题',
+  courses: '课程管理',
   'question-bank': '题库管理',
   exams: '考试管理',
   analytics: '学习分析',
@@ -37,7 +38,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex">
+    <div className='min-h-screen flex'>
       {/* 侧边栏 */}
       <Sidebar
         currentPage={currentPage}
@@ -47,7 +48,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       />
 
       {/* 主内容区 */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className='flex-1 flex flex-col min-w-0'>
         {/* 顶栏 */}
         <TopBar
           user={user}
@@ -57,9 +58,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         />
 
         {/* 内容区 */}
-        <PageContainer>
-          {children}
-        </PageContainer>
+        <PageContainer>{children}</PageContainer>
       </div>
     </div>
   );

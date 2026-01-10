@@ -163,8 +163,6 @@ const questionGenerators = {
   'multiple-choice': createMultipleChoiceQuestion,
   'fill-blank': createFillBlankQuestion,
   'short-answer': createShortAnswerQuestion,
-  'code-output': createCodeOutputQuestion,
-  'code-writing': createCodeWritingQuestion
 };
 ```
 

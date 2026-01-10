@@ -15,7 +15,7 @@ import { useAppStore } from '@/stores/useAppStore';
  * 使用通用浮动按钮和面板组件
  */
 export const OptimizedFloatingTimeRecorder: React.FC = () => {
-  const { generation, answering, setCurrentQuestionIndex } = useAppStore();
+  const { generation } = useAppStore();
   const {
     startTime,
     endTime,
@@ -27,13 +27,7 @@ export const OptimizedFloatingTimeRecorder: React.FC = () => {
     toggleExpanded,
     setExpanded,
     mode,
-    questionDurations,
-    activeQuestionId,
-    activeQuestionStart,
     totalAnsweringDuration,
-    startAnswering,
-    switchQuestion,
-    endAnswering,
   } = useTimeRecorderStore();
 
   // 同步主应用状态到时间记录状态 - 优化触发条件

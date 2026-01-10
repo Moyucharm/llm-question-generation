@@ -25,6 +25,7 @@ export interface Message {
  */
 export interface LLMRequest {
   messages: Message[];
+  model?: string;
   temperature?: number;
   max_tokens?: number;
   provider?: string;
@@ -91,7 +92,7 @@ export class LLMClient {
     }
   ): string {
     return JSON.stringify({
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
       temperature: options.temperature ?? this.config.temperature,
       max_tokens: options.max_tokens ?? this.config.maxTokens,
       stream: options.stream ?? false,

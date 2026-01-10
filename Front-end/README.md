@@ -13,7 +13,7 @@ QGen是一个现代化的AI驱动的在线出题系统，支持多种题型的�
 ## ✨ 核心特性
 
 ### 🤖 AI智能出题
-- **多题型支持**：单选题、多选题、填空题、简答题、代码输出题、代码编写题
+- **多题型支持**：单选题、多选题、填空题、简答题
 - **个性化配置**：自定义学科主题、题目数量、难度要求
 - **流式生成**：实时显示AI生成过程，提升用户体验
 - **智能提示词**：优化的prompt模板确保高质量题目生成
@@ -98,8 +98,6 @@ QGen/
 │   │   │   │   ├── MultipleChoiceQuestion.tsx # 多选题组件
 │   │   │   │   ├── FillBlankQuestion.tsx      # 填空题组件
 │   │   │   │   ├── ShortAnswerQuestion.tsx    # 简答题组件
-│   │   │   │   ├── CodeOutputQuestion.tsx     # 代码输出题组件
-│   │   │   │   └── CodeWritingQuestion.tsx    # 代码编写题组件
 │   │   │   ├── hooks/        # 题目组件hooks
 │   │   │   │   ├── PresetModal.tsx           # 预设模态框
 │   │   │   │   └── SavePresetModal.tsx       # 保存预设模态框
@@ -257,8 +255,6 @@ pnpm check
 | 多选题 | 从多个选项中选择多个正确答案 | 支持部分得分 |
 | 填空题 | 在指定位置填写答案 | 支持多个空白，智能匹配 |
 | 简答题 | 用文字详细回答问题 | AI语义理解评分 |
-| 代码输出题 | 根据给定代码写出运行结果 | 精确匹配输出格式 |
-| 代码编写题 | 编写代码实现指定功能 | AI代码质量评估 |
 
 ### 状态管理架构
 
@@ -356,8 +352,6 @@ export enum QuestionType {
   MULTIPLE_CHOICE = 'multiple-choice', // 多选题
   FILL_BLANK = 'fill-blank',           // 填空题
   SHORT_ANSWER = 'short-answer',       // 简答题
-  CODE_OUTPUT = 'code-output',         // 代码输出题
-  CODE_WRITING = 'code-writing'        // 代码编写题
 }
 
 // 试卷结构
@@ -393,34 +387,42 @@ export interface AppState {
 每种题型都有专门的接口定义，支持类型安全的答案处理：
 
 ```typescript
-// 单选题
+// Single choice
 export interface SingleChoiceQuestion {
   id: string;
   type: QuestionType.SINGLE_CHOICE;
   question: string;
   options: string[];
-  correctAnswer: number;               // 正确答案索引
-  userAnswer?: number;                 // 用户答案索引
+  correctAnswer: number;
+  userAnswer?: number;
 }
 
-// 多选题
+// Multiple choice
 export interface MultipleChoiceQuestion {
   id: string;
   type: QuestionType.MULTIPLE_CHOICE;
   question: string;
   options: string[];
-  correctAnswers: number[];            // 正确答案索引数组
-  userAnswer?: number[];               // 用户答案索引数组
+  correctAnswers: number[];
+  userAnswer?: number[];
 }
 
-// 代码题
-export interface CodeOutputQuestion {
+// Fill blank
+export interface FillBlankQuestion {
   id: string;
-  type: QuestionType.CODE_OUTPUT;
+  type: QuestionType.FILL_BLANK;
   question: string;
-  code: string;                        // 代码内容
-  correctOutput: string;               // 正确输出
-  userAnswer?: string;                 // 用户答案
+  correctAnswers: string[];
+  userAnswer?: string[];
+}
+
+// Short answer
+export interface ShortAnswerQuestion {
+  id: string;
+  type: QuestionType.SHORT_ANSWER;
+  question: string;
+  referenceAnswer: string;
+  userAnswer?: string;
 }
 ```
 
@@ -460,7 +462,7 @@ export interface QuestionPreset {
 
 基于 [`./src/pages/quiz/`](./src/pages/quiz/) 和 [`./src/components/Question/`](./src/components/Question/) 模块实现：
 
-- **多题型支持**：单选、多选、填空、简答、代码输出、代码编写六大题型
+- **多题型支持**：单选、多选、填空、简答四大题型
 - **智能导航**：题目导航栏实时显示答题状态，支持快速跳转
 - **流式答题**：支持题目边生成边答题的流式体验
 - **自动保存**：答案实时保存到状态管理中，防止数据丢失

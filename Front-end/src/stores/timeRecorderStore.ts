@@ -185,7 +185,7 @@ export const useTimeRecorderStore = create<TimeRecorderStore>()(
     endAnswering: () => {
       const state = get();
       const now = Date.now();
-      let questionDurations = { ...state.questionDurations };
+      const questionDurations = { ...state.questionDurations };
       if (state.activeQuestionId && state.activeQuestionStart) {
         const spent = now - state.activeQuestionStart;
         const prev = questionDurations[state.activeQuestionId] || 0;

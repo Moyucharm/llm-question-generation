@@ -16,7 +16,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [formErrors, setFormErrors] = useState<{ email?: string; password?: string }>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<{
+    email?: string;
+    password?: string;
+  }>({});
 
   // 清除错误
   useEffect(() => {
@@ -47,60 +51,68 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+    setSubmitError(null);
 
     if (!validateForm()) return;
 
-    await login(email, password);
+    try {
+      const ok = await login(email, password);
+      if (!ok) {
+        setSubmitError('邮箱或密码错误');
+      }
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : '登录失败');
+    }
   };
 
   return (
-    <AuthLayout title="欢迎回来" subtitle="登录以继续使用 QGen">
-      <form onSubmit={handleSubmit} className="space-y-5">
+    <AuthLayout title='欢迎回来' subtitle='登录以继续使用 QGen'>
+      <form onSubmit={handleSubmit} className='space-y-5'>
         {/* 错误提示 */}
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-            {error}
+        {(error || submitError) && (
+          <div className='p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm'>
+            {error || submitError}
           </div>
         )}
 
         {/* 邮箱 */}
         <FormInput
-          label="邮箱"
-          type="email"
+          label='邮箱'
+          type='email'
           icon={Mail}
-          placeholder="your@email.com"
+          placeholder='your@email.com'
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           error={formErrors.email}
           disabled={isLoading}
-          autoComplete="email"
+          autoComplete='email'
         />
 
         {/* 密码 */}
         <FormInput
-          label="密码"
-          type="password"
+          label='密码'
+          type='password'
           icon={Lock}
-          placeholder="••••••••"
+          placeholder='请输入密码'
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           error={formErrors.password}
           disabled={isLoading}
-          autoComplete="current-password"
+          autoComplete='current-password'
         />
 
         {/* 登录按钮 */}
         <button
-          type="submit"
+          type='submit'
           disabled={isLoading}
-          className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg
+          className='w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg
                      hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                      disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-colors flex items-center justify-center gap-2"
+                     transition-colors flex items-center justify-center gap-2'
         >
           {isLoading ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className='w-5 h-5 animate-spin' />
               登录中...
             </>
           ) : (
@@ -109,12 +121,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
         </button>
 
         {/* 切换到注册 */}
-        <div className="text-center text-sm text-gray-600">
+        <div className='text-center text-sm text-gray-600'>
           还没有账号？{' '}
           <button
-            type="button"
+            type='button'
             onClick={onSwitchToRegister}
-            className="text-blue-600 hover:text-blue-700 font-medium"
+            className='text-blue-600 hover:text-blue-700 font-medium'
           >
             立即注册
           </button>

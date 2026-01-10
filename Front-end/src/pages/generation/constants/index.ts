@@ -24,14 +24,4 @@ export const QUESTION_TYPE_OPTIONS = [
     label: '简答题',
     description: '用文字回答问题',
   },
-  {
-    type: QuestionType.CODE_OUTPUT,
-    label: '代码输出题',
-    description: '根据代码写出运行结果',
-  },
-  {
-    type: QuestionType.CODE_WRITING,
-    label: '代码编写题',
-    description: '编写代码实现指定功能',
-  },
 ];

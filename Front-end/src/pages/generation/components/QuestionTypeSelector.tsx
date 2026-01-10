@@ -36,9 +36,7 @@ export const QuestionTypeSelector: React.FC<QuestionTypeSelectorProps> = ({
                 >
                   -
                 </button>
-                <span className='w-8 text-center font-medium'>
-                  {count}
-                </span>
+                <span className='w-8 text-center font-medium'>{count}</span>
                 <button
                   type='button'
                   onClick={() => onQuestionConfigChange(option.type, count + 1)}

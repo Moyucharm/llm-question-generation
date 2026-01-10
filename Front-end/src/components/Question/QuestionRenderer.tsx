@@ -6,10 +6,7 @@ import {
   MultipleChoiceQuestion,
   FillBlankQuestion,
   ShortAnswerQuestion,
-  CodeOutputQuestion,
-  CodeWritingQuestion,
 } from './questions';
-import { useAttachMultipleChoiceHotkeys } from './questions/MultipleChoiceQuestion';
 
 interface Props {
   question: Question;
@@ -47,12 +44,6 @@ export const QuestionRenderer: React.FC<Props> = ({
         );
 
       case QuestionType.MULTIPLE_CHOICE:
-        // 挂载多选题热键（1-9 选择/取消，Enter 下一题）
-        useAttachMultipleChoiceHotkeys(
-          question as unknown as import('@/types').MultipleChoiceQuestion,
-          disabled,
-          (ans: number[]) => handleAnswerChange(ans),
-        );
         return (
           <MultipleChoiceQuestion
             question={question}
@@ -75,26 +66,6 @@ export const QuestionRenderer: React.FC<Props> = ({
       case QuestionType.SHORT_ANSWER:
         return (
           <ShortAnswerQuestion
-            question={question}
-            onAnswerChange={handleAnswerChange}
-            disabled={disabled}
-            showCorrectAnswer={showCorrectAnswer}
-          />
-        );
-
-      case QuestionType.CODE_OUTPUT:
-        return (
-          <CodeOutputQuestion
-            question={question}
-            onAnswerChange={handleAnswerChange}
-            disabled={disabled}
-            showCorrectAnswer={showCorrectAnswer}
-          />
-        );
-
-      case QuestionType.CODE_WRITING:
-        return (
-          <CodeWritingQuestion
             question={question}
             onAnswerChange={handleAnswerChange}
             disabled={disabled}
@@ -140,8 +111,6 @@ function getQuestionTypeLabel(type: QuestionType): string {
     [QuestionType.MULTIPLE_CHOICE]: '多选题',
     [QuestionType.FILL_BLANK]: '填空题',
     [QuestionType.SHORT_ANSWER]: '简答题',
-    [QuestionType.CODE_OUTPUT]: '代码输出题',
-    [QuestionType.CODE_WRITING]: '代码编写题',
   };
 
   return labels[type] || '未知题型';

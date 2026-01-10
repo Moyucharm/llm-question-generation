@@ -36,8 +36,6 @@ export function useQuizSubmission() {
         case 'fill-blank':
           return !q.userAnswer || q.userAnswer.some(answer => !answer?.trim());
         case 'short-answer':
-        case 'code-output':
-        case 'code-writing':
           return !q.userAnswer?.trim();
         default:
           return true;

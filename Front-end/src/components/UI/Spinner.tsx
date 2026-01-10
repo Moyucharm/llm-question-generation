@@ -16,18 +16,25 @@ const sizeStyles = {
   lg: 'w-8 h-8',
 };
 
-export const Spinner: React.FC<SpinnerProps> = ({ size = 'md', className = '' }) => {
+export const Spinner: React.FC<SpinnerProps> = ({
+  size = 'md',
+  className = '',
+}) => {
   return (
-    <Loader2 className={`animate-spin text-blue-600 ${sizeStyles[size]} ${className}`} />
+    <Loader2
+      className={`animate-spin text-blue-600 ${sizeStyles[size]} ${className}`}
+    />
   );
 };
 
 // 全屏加载
-export const LoadingScreen: React.FC<{ message?: string }> = ({ message = '加载中...' }) => {
+export const LoadingScreen: React.FC<{ message?: string }> = ({
+  message = '加载中...',
+}) => {
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center gap-4">
-      <Spinner size="lg" />
-      <p className="text-gray-500">{message}</p>
+    <div className='min-h-screen bg-gray-100 flex flex-col items-center justify-center gap-4'>
+      <Spinner size='lg' />
+      <p className='text-gray-500'>{message}</p>
     </div>
   );
 };

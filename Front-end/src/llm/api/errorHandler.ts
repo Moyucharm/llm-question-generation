@@ -24,7 +24,9 @@ export class ErrorHandler {
 
     try {
       const errorData: LLMError = await response.json();
-      if (errorData.error?.message) {
+      if (errorData.detail) {
+        errorMessage = errorData.detail;
+      } else if (errorData.error?.message) {
         errorMessage = errorData.error.message;
       }
     } catch {

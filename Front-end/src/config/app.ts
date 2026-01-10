@@ -74,18 +74,6 @@ export const QUESTION_TYPE_CONFIG = {
     icon: '📝',
     color: 'orange',
   },
-  'code-output': {
-    label: '代码输出题',
-    description: '根据代码写出运行结果',
-    icon: '💻',
-    color: 'indigo',
-  },
-  'code-writing': {
-    label: '代码编写题',
-    description: '编写代码实现指定功能',
-    icon: '⌨️',
-    color: 'red',
-  },
 } as const;
 
 /**

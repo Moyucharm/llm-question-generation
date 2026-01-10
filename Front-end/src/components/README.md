@@ -41,8 +41,6 @@ components/
 │   ├── QuestionRenderer.tsx        # 题目渲染器
 │   ├── StreamingQuestionRenderer.tsx # 流式题目渲染器
 │   └── questions/          # 各类题型组件
-│       ├── CodeOutputQuestion.tsx   # 代码输出题
-│       ├── CodeWritingQuestion.tsx  # 代码编写题
 │       ├── FillBlankQuestion.tsx    # 填空题
 │       ├── MultipleChoiceQuestion.tsx # 多选题
 │       ├── ShortAnswerQuestion.tsx  # 简答题
@@ -84,7 +82,7 @@ components/
 - **路径**: `./Question/`
 - **功能**: 题目渲染和交互处理
 - **特性**:
-  - 支持 6 种题型
+  - 支持 4 种题型
   - 流式渲染支持
   - 答案状态管理
   - 正确答案显示
@@ -168,7 +166,7 @@ export const TAB_CONFIG = {
 
 #### QuestionRenderer.tsx - 标准渲染器
 - **功能**: 根据题目类型动态渲染对应组件
-- **支持题型**: 单选、多选、填空、简答、代码输出、代码编写
+- **支持题型**: 单选、多选、填空、简答
 - **特性**:
   - 类型安全的题目渲染
   - 统一的答案处理接口
@@ -201,12 +199,8 @@ export const TAB_CONFIG = {
 - **功能**: 简答题的渲染和交互
 - **特性**: 多行文本输入、字数统计、自动调整高度
 
-#### CodeOutputQuestion.tsx - 代码输出题
-- **功能**: 代码输出题的渲染和交互
 - **特性**: 代码高亮显示、输出结果输入、语法提示
 
-#### CodeWritingQuestion.tsx - 代码编写题
-- **功能**: 代码编写题的渲染和交互
 - **特性**: 代码编辑器、语法高亮、自动补全
 
 ## 🎨 设计特点

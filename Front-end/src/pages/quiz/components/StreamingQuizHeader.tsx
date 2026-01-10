@@ -9,7 +9,7 @@ interface StreamingQuizHeaderProps {
   title?: string;
   subtitle?: string;
   onSaveToBank?: () => void; // 保存到题库回调
-  isSavingToBank?: boolean;  // 是否正在保存
+  isSavingToBank?: boolean; // 是否正在保存
 }
 
 /**
@@ -82,9 +82,7 @@ export const StreamingQuizHeader: React.FC<StreamingQuizHeaderProps> = memo(
                         保存中...
                       </>
                     ) : (
-                      <>
-                        📥 保存到题库
-                      </>
+                      <>📥 保存到题库</>
                     )}
                   </button>
                 )}

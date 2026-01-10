@@ -3,7 +3,13 @@
  * 封装后端认证相关接口调用
  */
 
-import type { LoginRequest, RegisterRequest, AuthResponse, User, ApiResponse } from './types';
+import type {
+  LoginRequest,
+  RegisterRequest,
+  AuthResponse,
+  User,
+  ApiResponse,
+} from './types';
 
 const API_BASE = '/api';
 
@@ -54,7 +60,9 @@ function getAuthHeaders(): Record<string, string> {
 /**
  * 用户登录
  */
-export async function login(data: LoginRequest): Promise<ApiResponse<AuthResponse>> {
+export async function login(
+  data: LoginRequest
+): Promise<ApiResponse<AuthResponse>> {
   const response = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -66,7 +74,9 @@ export async function login(data: LoginRequest): Promise<ApiResponse<AuthRespons
 /**
  * 用户注册
  */
-export async function register(data: RegisterRequest): Promise<ApiResponse<AuthResponse>> {
+export async function register(
+  data: RegisterRequest
+): Promise<ApiResponse<AuthResponse>> {
   const response = await fetch(`${API_BASE}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

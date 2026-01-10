@@ -52,28 +52,6 @@ const QUESTION_TYPE_DESCRIPTIONS = {
       "referenceAnswer": "参考答案"
     }`,
   },
-  'code-output': {
-    name: '代码输出题',
-    description: '根据给定代码写出运行结果',
-    format: `{
-      "id": "q5",
-      "type": "code-output",
-      "question": "请写出以下代码的输出结果",
-      "code": "console.log('Hello World');",
-      "correctOutput": "Hello World"
-    }`,
-  },
-  'code-writing': {
-    name: '代码编写题',
-    description: '编写代码实现指定功能',
-    format: `{
-      "id": "q6",
-      "type": "code-writing",
-      "question": "请编写一个函数实现指定功能",
-      "language": "javascript",
-      "referenceCode": "function example() {\n  return 'Hello World';\n}"
-    }`,
-  },
 } as const;
 
 /**
@@ -89,9 +67,7 @@ function generateSystemPrompt(): string {
 2. 题目内容要准确、有教育价值
 3. 难度适中，符合学习目标
 4. 选项设计要合理，干扰项要有一定迷惑性
-5. 代码题要确保语法正确，输出结果准确
-6. 填空题的空白数量要与答案数组长度一致
-
+5. 填空题的空白数量要与答案数组长度一致
 输出格式要求：
 - 只输出JSON格式的试卷数据，不要包含任何其他文字
 - JSON必须是有效的，可以被直接解析
@@ -241,22 +217,6 @@ export function validateQuizJSON(jsonStr: string): {
             return {
               isValid: false,
               error: `第${i + 1}道简答题格式错误：缺少referenceAnswer字段`,
-            };
-          }
-          break;
-        case 'code-output':
-          if (!question.code || !question.correctOutput) {
-            return {
-              isValid: false,
-              error: `第${i + 1}道代码输出题格式错误：缺少code或correctOutput字段`,
-            };
-          }
-          break;
-        case 'code-writing':
-          if (!question.language || !question.referenceCode) {
-            return {
-              isValid: false,
-              error: `第${i + 1}道代码编写题格式错误：缺少language或referenceCode字段`,
             };
           }
           break;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
 import { GenerationPage, QuizPage, ResultPage } from '@/pages';
 import { StreamingQuizPage } from '@/pages/quiz/streaming';
@@ -44,6 +44,37 @@ export const AppRouter: React.FC = () => {
     // 默认显示生成页面
     return <GenerationPage />;
   };
+
+  useEffect(() => {
+    let routeKey: 'generation' | 'quiz' | 'result' = 'generation';
+    if (grading.status === 'complete' && grading.result) {
+      routeKey = 'result';
+    } else if (grading.status === 'grading') {
+      routeKey = 'result';
+    } else if (generation.currentQuiz && answering.isSubmitted) {
+      routeKey = 'result';
+    } else if (
+      generation.status === 'generating' &&
+      generation.streamingQuestions &&
+      generation.streamingQuestions.length > 0
+    ) {
+      routeKey = 'quiz';
+    } else if (generation.status === 'complete' && generation.currentQuiz) {
+      routeKey = 'quiz';
+    }
+
+    const desiredPath = `/${routeKey}`;
+    if (window.location.pathname !== desiredPath) {
+      window.history.replaceState(null, '', desiredPath);
+    }
+  }, [
+    answering.isSubmitted,
+    generation.currentQuiz,
+    generation.status,
+    generation.streamingQuestions,
+    grading.result,
+    grading.status,
+  ]);
 
   return <div className='min-h-screen'>{getCurrentPage()}</div>;
 };

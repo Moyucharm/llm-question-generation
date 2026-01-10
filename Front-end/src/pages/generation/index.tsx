@@ -69,9 +69,7 @@ export const GenerationPage: React.FC = () => {
       <div className='bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden'>
         {/* 页面头部 */}
         <div className='px-8 py-6 border-b border-gray-200'>
-          <h1 className='text-2xl font-bold text-gray-900 mb-1'>
-            AI 智能出题
-          </h1>
+          <h1 className='text-2xl font-bold text-gray-900 mb-1'>AI 智能出题</h1>
           <p className='text-gray-500'>配置参数，让 AI 为你生成高质量题目</p>
         </div>
 

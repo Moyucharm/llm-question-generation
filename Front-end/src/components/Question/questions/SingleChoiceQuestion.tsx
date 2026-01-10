@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
-import React from 'react';
 import type { SingleChoiceQuestion as SingleChoiceQuestionType } from '@/types';
 
 interface Props {
@@ -21,11 +20,14 @@ export const SingleChoiceQuestion: React.FC<Props> = ({
   showCorrectAnswer = false,
 }) => {
   const { nextQuestion } = useAppStore();
-  const handleOptionChange = (optionIndex: number) => {
-    if (!disabled) {
-      onAnswerChange(optionIndex);
-    }
-  };
+  const handleOptionChange = useCallback(
+    (optionIndex: number) => {
+      if (!disabled) {
+        onAnswerChange(optionIndex);
+      }
+    },
+    [disabled, onAnswerChange]
+  );
 
   // 键盘快捷键：1-4 选择 A-D，Enter 下一题
   useEffect(() => {
@@ -33,7 +35,8 @@ export const SingleChoiceQuestion: React.FC<Props> = ({
       if (disabled) return;
       // 仅对当前题目生效
       const { generation, answering } = useAppStore.getState();
-      const activeId = generation.currentQuiz?.questions[answering.currentQuestionIndex]?.id;
+      const activeId =
+        generation.currentQuiz?.questions[answering.currentQuestionIndex]?.id;
       if (activeId !== question.id) return;
       // 数字键 1-9 选择对应选项
       if (e.key >= '1' && e.key <= '9') {
@@ -54,7 +57,14 @@ export const SingleChoiceQuestion: React.FC<Props> = ({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [disabled, question.userAnswer, question.options, nextQuestion]);
+  }, [
+    disabled,
+    handleOptionChange,
+    nextQuestion,
+    question.id,
+    question.options,
+    question.userAnswer,
+  ]);
 
   return (
     <div className='space-y-4'>

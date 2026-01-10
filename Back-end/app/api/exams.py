@@ -118,6 +118,7 @@ async def get_exams(
                 total_score=attempt.total_score if attempt else 0,
                 attempt_count=1 if attempt else 0,
                 attempt_status=attempt.status.value if attempt else None,
+                can_start=ev.get("can_start"),
                 created_at=exam.created_at,
                 updated_at=exam.updated_at,
             ))
@@ -307,12 +308,12 @@ async def start_exam(
 ):
     """开始考试（学生）"""
     service = ExamService(db)
-    attempt = await service.start_attempt(exam_id, current_user.id)
+    attempt, error = await service.start_attempt(exam_id, current_user.id)
 
     if not attempt:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="无法开始考试"
+            detail=error or "无法开始考试"
         )
 
     # 计算剩余时间

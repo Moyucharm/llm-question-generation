@@ -64,6 +64,7 @@ class ExamResponse(ExamBase):
     total_score: Optional[int] = 0  # 可能为 None，默认 0
     attempt_count: int = 0  # 参加人数
     attempt_status: Optional[str] = None  # 学生: in_progress, graded, submitted
+    can_start: Optional[bool] = None  # 学生: 是否可开始
     created_at: datetime
     updated_at: datetime
 

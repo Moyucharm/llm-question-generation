@@ -34,18 +34,19 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
       disabled={!enabled}
       className={`
         w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left
-        ${active
-          ? 'bg-blue-50 text-blue-600 font-medium'
-          : enabled
-            ? 'text-gray-600 hover:bg-gray-100'
-            : 'text-gray-400 cursor-not-allowed'
+        ${
+          active
+            ? 'bg-blue-50 text-blue-600 font-medium'
+            : enabled
+              ? 'text-gray-600 hover:bg-gray-100'
+              : 'text-gray-400 cursor-not-allowed'
         }
       `}
     >
-      <Icon className="w-5 h-5 flex-shrink-0" />
-      <span className="flex-1 truncate">{label}</span>
+      <Icon className='w-5 h-5 flex-shrink-0' />
+      <span className='flex-1 truncate'>{label}</span>
       {badge && (
-        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-600">
+        <span className='px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-600'>
           {badge}
         </span>
       )}

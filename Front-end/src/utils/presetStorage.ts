@@ -99,8 +99,6 @@ export const generatePresetName = (
     'multiple-choice': '多选',
     'fill-blank': '填空',
     'short-answer': '简答',
-    'code-output': '代码输出',
-    'code-writing': '代码编写',
   };
 
   const totalQuestions = questionConfigs.reduce(

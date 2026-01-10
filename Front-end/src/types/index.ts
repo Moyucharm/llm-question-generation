@@ -1,4 +1,4 @@
-// ================================
+﻿// ================================
 // MVP 基础类型定义
 // ================================
 
@@ -8,8 +8,6 @@ export enum QuestionType {
   MULTIPLE_CHOICE = 'multiple-choice', // 多选题
   FILL_BLANK = 'fill-blank', // 填空题
   SHORT_ANSWER = 'short-answer', // 简答题
-  CODE_OUTPUT = 'code-output', // 看代码写输出题
-  CODE_WRITING = 'code-writing', // 代码手写题
 }
 
 // ================================
@@ -90,34 +88,12 @@ export interface ShortAnswerQuestion {
   userAnswer?: string; // 用户答案
 }
 
-/** 看代码写输出题 */
-export interface CodeOutputQuestion {
-  id: string;
-  type: QuestionType.CODE_OUTPUT;
-  question: string; // 题目描述
-  code: string; // 代码内容
-  correctOutput: string; // 正确输出
-  userAnswer?: string; // 用户答案
-}
-
-/** 代码手写题 */
-export interface CodeWritingQuestion {
-  id: string;
-  type: QuestionType.CODE_WRITING;
-  question: string; // 题目要求
-  language: string; // 编程语言
-  referenceCode: string; // 参考代码
-  userAnswer?: string; // 用户代码
-}
-
 /** 联合题目类型 */
 export type Question =
   | SingleChoiceQuestion
   | MultipleChoiceQuestion
   | FillBlankQuestion
-  | ShortAnswerQuestion
-  | CodeOutputQuestion
-  | CodeWritingQuestion;
+  | ShortAnswerQuestion;
 
 // ================================
 // 试卷和会话

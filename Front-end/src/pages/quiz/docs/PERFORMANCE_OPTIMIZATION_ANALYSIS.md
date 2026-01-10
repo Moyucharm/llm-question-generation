@@ -271,8 +271,6 @@ export function useQuizStatus(quiz: Quiz | null) {
         case 'fill-blank':
           return q.userAnswer && q.userAnswer.some(answer => answer?.trim());
         case 'short-answer':
-        case 'code-output':
-        case 'code-writing':
           return q.userAnswer?.trim();
         default:
           return false;
@@ -297,8 +295,6 @@ export function useQuizStatus(quiz: Quiz | null) {
       case 'fill-blank':
         return question.userAnswer !== undefined && question.userAnswer.some(answer => answer?.trim() !== '');
       case 'short-answer':
-      case 'code-output':
-      case 'code-writing':
         return question.userAnswer !== undefined && question.userAnswer.trim() !== '';
       default:
         return false;
@@ -363,8 +359,6 @@ export function useQuizSubmission() {
         case 'fill-blank':
           return !q.userAnswer || q.userAnswer.some(answer => !answer?.trim());
         case 'short-answer':
-        case 'code-output':
-        case 'code-writing':
           return !q.userAnswer?.trim();
         default:
           return true;

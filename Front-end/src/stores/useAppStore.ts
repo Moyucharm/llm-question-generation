@@ -48,7 +48,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
   ...createAnsweringActions(set, get),
   ...createGradingActions(set, get),
 
-
   // 重置整个应用状态
   resetApp: () => {
     set(() => ({

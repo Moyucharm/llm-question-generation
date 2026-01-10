@@ -87,7 +87,9 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
       {/* 题型配置 */}
       <div className='mb-8'>
         <div className='flex items-center justify-between mb-4'>
-          <h3 className='text-lg font-medium text-gray-900 dark:text-neutral-100'>题型配置</h3>
+          <h3 className='text-lg font-medium text-gray-900 dark:text-neutral-100'>
+            题型配置
+          </h3>
           <div className='flex gap-2'>
             <button
               type='button'

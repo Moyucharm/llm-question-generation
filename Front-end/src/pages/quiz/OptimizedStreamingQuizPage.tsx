@@ -43,18 +43,19 @@ export const OptimizedStreamingQuizPage: React.FC = () => {
     setIsSavingToBank(true);
     try {
       // 转换题目格式 - 将流式题目转换为题库格式
-      const typeMap: Record<string, 'single' | 'multiple' | 'blank' | 'short'> = {
-        'single_choice': 'single',
-        'multiple_choice': 'multiple',
-        'fill_blank': 'blank',
-        'short_answer': 'short',
-        'single': 'single',
-        'multiple': 'multiple',
-        'blank': 'blank',
-        'short': 'short',
-      };
+      const typeMap: Record<string, 'single' | 'multiple' | 'blank' | 'short'> =
+        {
+          single_choice: 'single',
+          multiple_choice: 'multiple',
+          fill_blank: 'blank',
+          short_answer: 'short',
+          single: 'single',
+          multiple: 'multiple',
+          blank: 'blank',
+          short: 'short',
+        };
 
-      const questionsToSave = streamingQuestions.map((q) => ({
+      const questionsToSave = streamingQuestions.map(q => ({
         type: typeMap[q.type as string] || 'short',
         stem: String(q.stem || q.content || ''),
         options: q.options as Record<string, string> | undefined,
@@ -110,7 +111,13 @@ export const OptimizedStreamingQuizPage: React.FC = () => {
     <QuizPageLayout>
       <StreamingQuizHeader
         title='流式试卷生成'
-        subtitle={isGenerating ? '正在生成中...' : (savedToBank ? '已保存到题库' : '生成完成')}
+        subtitle={
+          isGenerating
+            ? '正在生成中...'
+            : savedToBank
+              ? '已保存到题库'
+              : '生成完成'
+        }
         status={isGenerating ? 'generating' : 'complete'}
         completedQuestionCount={completedQuestionCount || 0}
         progress={progress}

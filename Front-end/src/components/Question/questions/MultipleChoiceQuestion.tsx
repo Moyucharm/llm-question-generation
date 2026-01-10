@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import type { MultipleChoiceQuestion as MultipleChoiceQuestionType } from '@/types';
 import { useAppStore } from '@/stores/useAppStore';
 
@@ -19,8 +19,49 @@ export const MultipleChoiceQuestion: React.FC<Props> = ({
   disabled = false,
   showCorrectAnswer = false,
 }) => {
-  const userAnswers = question.userAnswer || [];
   const { nextQuestion } = useAppStore();
+  const userAnswers = useMemo(
+    () => question.userAnswer ?? [],
+    [question.userAnswer]
+  );
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (disabled) return;
+      // 仅对当前题目生效
+      const { generation, answering } = useAppStore.getState();
+      const activeId =
+        generation.currentQuiz?.questions[answering.currentQuestionIndex]?.id;
+      if (activeId !== question.id) return;
+      if (e.key >= '1' && e.key <= '9') {
+        const index = Number(e.key) - 1;
+        if (index < (question.options?.length || 0)) {
+          e.preventDefault();
+          const isSelected = userAnswers.includes(index);
+          const newAnswers = isSelected
+            ? userAnswers.filter(i => i !== index)
+            : [...userAnswers, index];
+          onAnswerChange(newAnswers);
+        }
+        return;
+      }
+      if (e.key === 'Enter') {
+        if (userAnswers.length > 0) {
+          e.preventDefault();
+          nextQuestion();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [
+    disabled,
+    nextQuestion,
+    onAnswerChange,
+    question.id,
+    question.options,
+    userAnswers,
+  ]);
 
   const handleOptionChange = (optionIndex: number) => {
     if (disabled) return;
@@ -36,6 +77,9 @@ export const MultipleChoiceQuestion: React.FC<Props> = ({
     <div className='space-y-4'>
       <h3 className='text-lg font-medium text-gray-900'>{question.question}</h3>
       <p className='text-sm text-gray-600'>请选择所有正确的选项（可多选）</p>
+      <p className='text-xs text-gray-500'>
+        快捷键：1-9 选择/取消，Enter 下一题
+      </p>
 
       <div className='space-y-2'>
         {question.options.map((option, index) => {
@@ -88,78 +132,4 @@ export const MultipleChoiceQuestion: React.FC<Props> = ({
       </div>
     </div>
   );
-};
-
-// 在组件内部注册热键
-export const useAttachMultipleChoiceHotkeys = (
-  question: MultipleChoiceQuestionType,
-  disabled: boolean,
-  onAnswerChange: (answer: number[]) => void,
-) => {
-  const { nextQuestion } = useAppStore();
-  const userAnswers = question.userAnswer || [];
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (disabled) return;
-      // 仅对当前题目生效
-      const { generation, answering } = useAppStore.getState();
-      const activeId = generation.currentQuiz?.questions[answering.currentQuestionIndex]?.id;
-      if (activeId !== question.id) return;
-      if (e.key >= '1' && e.key <= '9') {
-        const index = Number(e.key) - 1;
-        if (index < (question.options?.length || 0)) {
-          e.preventDefault();
-          const isSelected = userAnswers.includes(index);
-          const newAnswers = isSelected
-            ? userAnswers.filter(i => i !== index)
-            : [...userAnswers, index];
-          onAnswerChange(newAnswers);
-        }
-        return;
-      }
-      if (e.key === 'Enter') {
-        if (userAnswers.length > 0) {
-          e.preventDefault();
-          nextQuestion();
-        }
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [disabled, question.options, userAnswers, onAnswerChange, nextQuestion]);
-};
-
-// 键盘快捷键：1-9 切换选项，Enter 下一题（至少已勾选一个）
-export const useMultipleChoiceHotkeys = (
-  question: MultipleChoiceQuestionType,
-  disabled: boolean,
-  onChange: (answer: number[]) => void,
-) => {
-  const { nextQuestion } = useAppStore();
-  const userAnswers = question.userAnswer || [];
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (disabled) return;
-      if (e.key >= '1' && e.key <= '9') {
-        const index = Number(e.key) - 1;
-        if (index < (question.options?.length || 0)) {
-          e.preventDefault();
-          const isSelected = userAnswers.includes(index);
-          const newAnswers = isSelected
-            ? userAnswers.filter(i => i !== index)
-            : [...userAnswers, index];
-          onChange(newAnswers);
-        }
-        return;
-      }
-      if (e.key === 'Enter') {
-        if (userAnswers.length > 0) {
-          e.preventDefault();
-          nextQuestion();
-        }
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [disabled, question.options, userAnswers, onChange, nextQuestion]);
 };

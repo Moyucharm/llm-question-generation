@@ -38,22 +38,18 @@ export const Card: React.FC<CardProps> = ({
 };
 
 // 卡片标题
-export const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({
-  children,
-  className = '',
-}) => {
-  return (
-    <div className={`mb-4 ${className}`}>
-      {children}
-    </div>
-  );
+export const CardHeader: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+}> = ({ children, className = '' }) => {
+  return <div className={`mb-4 ${className}`}>{children}</div>;
 };
 
 // 卡片标题文本
-export const CardTitle: React.FC<{ children: React.ReactNode; className?: string }> = ({
-  children,
-  className = '',
-}) => {
+export const CardTitle: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+}> = ({ children, className = '' }) => {
   return (
     <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>
       {children}
@@ -62,9 +58,9 @@ export const CardTitle: React.FC<{ children: React.ReactNode; className?: string
 };
 
 // 卡片内容
-export const CardContent: React.FC<{ children: React.ReactNode; className?: string }> = ({
-  children,
-  className = '',
-}) => {
+export const CardContent: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+}> = ({ children, className = '' }) => {
   return <div className={className}>{children}</div>;
 };

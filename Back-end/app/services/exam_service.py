@@ -86,7 +86,8 @@ class ExamService:
         limit: int = 20
     ) -> tuple[List[dict], int]:
         """获取学生可参加的考试列表"""
-        now = datetime.now(timezone.utc)
+        now_utc = datetime.now(timezone.utc)
+        now_naive = datetime.now()
 
         # 查询已发布的考试
         query = (
@@ -116,18 +117,25 @@ class ExamService:
             attempt = attempts.get(exam.id)
             can_start = True
 
-            # 检查时间限制 - 确保时区一致
+            # 检查时间限制
             start_time = exam.start_time
             end_time = exam.end_time
-            if start_time and start_time.tzinfo is None:
-                start_time = start_time.replace(tzinfo=timezone.utc)
-            if end_time and end_time.tzinfo is None:
-                end_time = end_time.replace(tzinfo=timezone.utc)
-            
-            if start_time and now < start_time:
-                can_start = False
-            if end_time and now > end_time:
-                can_start = False
+
+            if start_time:
+                if start_time.tzinfo is None:
+                    if now_naive < start_time:
+                        can_start = False
+                else:
+                    if now_utc.astimezone(start_time.tzinfo) < start_time:
+                        can_start = False
+
+            if end_time:
+                if end_time.tzinfo is None:
+                    if now_naive > end_time:
+                        can_start = False
+                else:
+                    if now_utc.astimezone(end_time.tzinfo) > end_time:
+                        can_start = False
 
             exam_views.append({
                 "exam": exam,
@@ -268,11 +276,34 @@ class ExamService:
         self,
         exam_id: int,
         student_id: int
-    ) -> Optional[Attempt]:
+    ) -> tuple[Optional[Attempt], Optional[str]]:
         """学生开始考试"""
         exam = await self.get_exam(exam_id)
-        if not exam or exam.status != ExamStatus.PUBLISHED:
-            return None
+        if not exam:
+            return None, "考试不存在"
+        if exam.status != ExamStatus.PUBLISHED:
+            return None, "考试未发布"
+
+        now_utc = datetime.now(timezone.utc)
+        now_naive = datetime.now()
+        start_time = exam.start_time
+        end_time = exam.end_time
+
+        if start_time:
+            if start_time.tzinfo is None:
+                if now_naive < start_time:
+                    return None, "考试尚未开始"
+            else:
+                if now_utc.astimezone(start_time.tzinfo) < start_time:
+                    return None, "考试尚未开始"
+
+        if end_time:
+            if end_time.tzinfo is None:
+                if now_naive > end_time:
+                    return None, "考试已结束"
+            else:
+                if now_utc.astimezone(end_time.tzinfo) > end_time:
+                    return None, "考试已结束"
 
         # 检查是否已有进行中的答题
         existing_query = (
@@ -287,9 +318,8 @@ class ExamService:
 
         if existing:
             if existing.status == AttemptStatus.IN_PROGRESS:
-                return existing  # 返回进行中的答题
-            else:
-                return None  # 已提交，不能重新开始
+                return existing, None  # 返回进行中的答题
+            return None, "考试已提交，无法重复参加"  # 已提交，不能重新开始
 
         # 创建新答题记录
         attempt = Attempt(
@@ -301,7 +331,7 @@ class ExamService:
         self.db.add(attempt)
         await self.db.commit()
         await self.db.refresh(attempt)
-        return attempt
+        return attempt, None
 
     async def get_attempt(
         self,
@@ -559,25 +589,33 @@ class ExamService:
             exam.paper_id = paper.id
             await self.db.flush()
 
-        # 创建题目
-        question_type = question_data.get("type", "single")
-        try:
-            q_type = QuestionType(question_type)
-        except ValueError:
-            q_type = QuestionType.SINGLE
+        question_id = question_data.get("question_id")
+        if question_id:
+            question_query = select(Question).where(Question.id == question_id)
+            question_result = await self.db.execute(question_query)
+            question = question_result.scalar_one_or_none()
+            if not question:
+                return None
+        else:
+            # 创建题目
+            question_type = question_data.get("type", "single")
+            try:
+                q_type = QuestionType(question_type)
+            except ValueError:
+                q_type = QuestionType.SINGLE
 
-        question = Question(
-            type=q_type,
-            stem=question_data.get("stem", ""),
-            options=question_data.get("options"),
-            answer=question_data.get("answer"),
-            explanation=question_data.get("explanation"),
-            difficulty=question_data.get("difficulty", 3),
-            knowledge_point=question_data.get("knowledge_point"),
-            created_by=teacher_id,
-        )
-        self.db.add(question)
-        await self.db.flush()
+            question = Question(
+                type=q_type,
+                stem=question_data.get("stem", ""),
+                options=question_data.get("options"),
+                answer=question_data.get("answer"),
+                explanation=question_data.get("explanation"),
+                difficulty=question_data.get("difficulty", 3),
+                knowledge_point=question_data.get("knowledge_point"),
+                created_by=teacher_id,
+            )
+            self.db.add(question)
+            await self.db.flush()
 
         # 获取当前题目数量确定顺序
         count_query = (
@@ -588,11 +626,15 @@ class ExamService:
         order = (count_result.scalar() or 0) + 1
 
         # 关联到试卷
+        score = question_data.get("score")
+        if score is None:
+            score = question.score if question.score is not None else 10
+
         paper_question = PaperQuestion(
             paper_id=exam.paper_id,
             question_id=question.id,
             order=order,
-            score=question_data.get("score", 10),
+            score=score,
         )
         self.db.add(paper_question)
 

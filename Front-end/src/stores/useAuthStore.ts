@@ -28,7 +28,12 @@ interface AuthState {
 interface AuthActions {
   // 认证操作
   login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, name: string, password: string, role?: 'student' | 'teacher') => Promise<boolean>;
+  register: (
+    email: string,
+    name: string,
+    password: string,
+    role?: 'student' | 'teacher'
+  ) => Promise<boolean>;
   logout: () => void;
 
   // 初始化
@@ -70,14 +75,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         });
         return true;
       } else {
+        const status = result.error?.status;
+        const detail = result.error?.detail;
+        const message =
+          status === 401 || detail === 'Incorrect email or password'
+            ? '邮箱或密码错误'
+            : detail || '登录失败';
         set({
           isLoading: false,
-          error: result.error?.detail || '登录失败',
+          error: message,
         });
         return false;
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : '登录失败，请稍后重试';
+      const message =
+        err instanceof Error ? err.message : '登录失败，请稍后重试';
       set({ isLoading: false, error: message });
       return false;
     }
@@ -115,7 +127,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         return false;
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : '注册失败，请稍后重试';
+      const message =
+        err instanceof Error ? err.message : '注册失败，请稍后重试';
       set({ isLoading: false, error: message });
       return false;
     }
