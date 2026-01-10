@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
 import {
   QuizStatusPage,
@@ -6,6 +6,7 @@ import {
   QuizPageLayout,
   VirtualizedQuestionList,
 } from './components';
+import { questionBankService } from '@/services/questionBankService';
 
 /**
  * 优化后的流式试卷页面组件
@@ -22,6 +23,10 @@ export const OptimizedStreamingQuizPage: React.FC = () => {
     progress,
   } = generation;
 
+  // 保存到题库状态
+  const [isSavingToBank, setIsSavingToBank] = useState(false);
+  const [savedToBank, setSavedToBank] = useState(false);
+
   // 缓存事件处理函数
   const handleGoBack = useCallback(() => {
     resetApp();
@@ -30,6 +35,46 @@ export const OptimizedStreamingQuizPage: React.FC = () => {
   const handleRestart = useCallback(() => {
     resetApp();
   }, [resetApp]);
+
+  // 保存到题库
+  const handleSaveToBank = useCallback(async () => {
+    if (!streamingQuestions || streamingQuestions.length === 0) return;
+
+    setIsSavingToBank(true);
+    try {
+      // 转换题目格式 - 将流式题目转换为题库格式
+      const typeMap: Record<string, 'single' | 'multiple' | 'blank' | 'short'> = {
+        'single_choice': 'single',
+        'multiple_choice': 'multiple',
+        'fill_blank': 'blank',
+        'short_answer': 'short',
+        'single': 'single',
+        'multiple': 'multiple',
+        'blank': 'blank',
+        'short': 'short',
+      };
+
+      const questionsToSave = streamingQuestions.map((q) => ({
+        type: typeMap[q.type as string] || 'short',
+        stem: String(q.stem || q.content || ''),
+        options: q.options as Record<string, string> | undefined,
+        answer: q.answer,
+        explanation: String(q.explanation || ''),
+        difficulty: Number(q.difficulty) || 3,
+        score: 10,
+        status: 'draft' as const,
+      }));
+
+      await questionBankService.batchCreate({ questions: questionsToSave });
+      setSavedToBank(true);
+      alert(`成功保存 ${questionsToSave.length} 道题目到题库！`);
+    } catch (err) {
+      console.error('保存到题库失败:', err);
+      alert(err instanceof Error ? err.message : '保存失败');
+    } finally {
+      setIsSavingToBank(false);
+    }
+  }, [streamingQuestions]);
 
   const handleAnswerChange = useCallback(() => {
     // 答题逻辑
@@ -65,11 +110,13 @@ export const OptimizedStreamingQuizPage: React.FC = () => {
     <QuizPageLayout>
       <StreamingQuizHeader
         title='流式试卷生成'
-        subtitle={isGenerating ? '正在生成中...' : '生成完成'}
+        subtitle={isGenerating ? '正在生成中...' : (savedToBank ? '已保存到题库' : '生成完成')}
         status={isGenerating ? 'generating' : 'complete'}
         completedQuestionCount={completedQuestionCount || 0}
         progress={progress}
         onGoBack={handleGoBack}
+        onSaveToBank={savedToBank ? undefined : handleSaveToBank}
+        isSavingToBank={isSavingToBank}
       />
 
       {/* 主内容区域 */}

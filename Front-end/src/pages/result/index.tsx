@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useGradingStatus } from './hooks';
-import { RotateCcw, Printer, Trophy, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { RotateCcw, Printer, Trophy, CheckCircle, XCircle, AlertCircle, Save } from 'lucide-react';
 import {
   GradingStats,
   QuestionResult,
@@ -9,6 +9,7 @@ import {
   GradingLoading,
   EmptyResultState,
 } from './components';
+import { questionBankService } from '@/services/questionBankService';
 
 /**
  * 批改结果页面
@@ -20,11 +21,14 @@ export const ResultPage: React.FC = () => {
   const quiz = generation.currentQuiz;
   const result = grading.result;
 
+  // 保存到题库状态
+  const [isSavingToBank, setIsSavingToBank] = useState(false);
+  const [savedToBank, setSavedToBank] = useState(false);
+
   // 批改状态
   const {
     scorePercentage,
     scoreLevel,
-    scoreColor,
     correctCount,
     partialCount,
     wrongCount,
@@ -34,6 +38,80 @@ export const ResultPage: React.FC = () => {
   const handlePrint = () => {
     window.print();
   };
+
+  // 保存到题库
+  const handleSaveToBank = useCallback(async () => {
+    console.log('handleSaveToBank 被调用', { quiz, questions: quiz?.questions });
+    if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+      console.log('quiz 为空或没有题目，提前返回');
+      alert('没有题目可保存');
+      return;
+    }
+
+    setIsSavingToBank(true);
+    try {
+      // 类型映射 - 使用正确的 QuestionType 枚举值
+      const typeMap: Record<string, 'single' | 'multiple' | 'blank' | 'short'> = {
+        'single-choice': 'single',
+        'multiple-choice': 'multiple',
+        'fill-blank': 'blank',
+        'short-answer': 'short',
+        'code-output': 'short',
+        'code-writing': 'short',
+      };
+
+      const questionsToSave = quiz.questions.map((q) => {
+        // 使用 unknown 类型访问属性
+        const qAny = q as unknown as Record<string, unknown>;
+        const stem = String(qAny.question || '');
+
+        // 获取答案和选项
+        let answer: unknown = qAny.correctAnswer ?? qAny.correctAnswers ?? qAny.referenceAnswer ?? qAny.correctOutput ?? '';
+        let options: Record<string, string> | undefined;
+
+        if (q.type.includes('choice') && Array.isArray(qAny.options)) {
+          options = (qAny.options as string[]).reduce((acc, opt, idx) => {
+            acc[String.fromCharCode(65 + idx)] = opt;
+            return acc;
+          }, {} as Record<string, string>);
+          // 转换数字索引为字母
+          if (typeof answer === 'number') {
+            answer = String.fromCharCode(65 + (answer as number));
+          } else if (Array.isArray(answer)) {
+            answer = (answer as number[]).map(i => String.fromCharCode(65 + i));
+          }
+        }
+
+        return {
+          type: typeMap[q.type] || 'short',
+          stem,
+          options,
+          answer,
+          explanation: '',
+          difficulty: 3,
+          score: 10,
+          status: 'draft' as const,
+        };
+      });
+
+      await questionBankService.batchCreate({ questions: questionsToSave });
+      setSavedToBank(true);
+      alert(`成功保存 ${questionsToSave.length} 道题目到题库！`);
+    } catch (err) {
+      console.error('保存到题库失败:', err);
+      // 检查是否为权限错误
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { status?: number } };
+        if (axiosError.response?.status === 403) {
+          alert('权限不足：只有教师或管理员账号才能保存题目到题库。\n\n请使用教师账号登录后再试。');
+          return;
+        }
+      }
+      alert(err instanceof Error ? err.message : '保存失败，请检查网络连接');
+    } finally {
+      setIsSavingToBank(false);
+    }
+  }, [quiz]);
 
   // 如果正在批改，显示加载状态
   if (grading.status === 'grading') {
@@ -72,6 +150,22 @@ export const ResultPage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* 保存到题库按钮 */}
+            {!savedToBank && (
+              <button
+                onClick={handleSaveToBank}
+                disabled={isSavingToBank}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-green-400 transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                {isSavingToBank ? '保存中...' : '保存到题库'}
+              </button>
+            )}
+            {savedToBank && (
+              <span className="flex items-center gap-2 px-4 py-2 text-green-600">
+                ✓ 已保存
+              </span>
+            )}
             <button
               onClick={handlePrint}
               className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"

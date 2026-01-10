@@ -15,6 +15,7 @@ from app.services.generation_pipeline import (
     QuestionStatus,
 )
 from app.services.course_service import CourseService
+from app.services.question_bank_service import QuestionBankService, question_to_response
 
 __all__ = [
     # Auth
@@ -36,4 +37,7 @@ __all__ = [
     "QuestionStatus",
     # Course
     "CourseService",
+    # Question Bank
+    "QuestionBankService",
+    "question_to_response",
 ]

@@ -8,6 +8,8 @@ interface StreamingQuizHeaderProps {
   progress?: number;
   title?: string;
   subtitle?: string;
+  onSaveToBank?: () => void; // 保存到题库回调
+  isSavingToBank?: boolean;  // 是否正在保存
 }
 
 /**
@@ -22,6 +24,8 @@ export const StreamingQuizHeader: React.FC<StreamingQuizHeaderProps> = memo(
     progress,
     title = '流式试卷生成',
     subtitle,
+    onSaveToBank,
+    isSavingToBank = false,
   }) => {
     // 根据状态生成副标题
     const getSubtitle = () => {
@@ -63,8 +67,27 @@ export const StreamingQuizHeader: React.FC<StreamingQuizHeaderProps> = memo(
                 </div>
               </div>
 
-              {/* 右侧：进度信息 */}
+              {/* 右侧：保存按钮和进度信息 */}
               <div className='flex items-center gap-4'>
+                {/* 保存到题库按钮 - 只在生成完成且有回调时显示 */}
+                {status === 'complete' && onSaveToBank && (
+                  <button
+                    onClick={onSaveToBank}
+                    disabled={isSavingToBank}
+                    className='px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 disabled:bg-green-400 rounded-lg transition-colors flex items-center gap-2'
+                  >
+                    {isSavingToBank ? (
+                      <>
+                        <span className='animate-spin'>⏳</span>
+                        保存中...
+                      </>
+                    ) : (
+                      <>
+                        📥 保存到题库
+                      </>
+                    )}
+                  </button>
+                )}
                 <div className='text-sm text-gray-600'>
                   已完成: {completedQuestionCount} 题
                 </div>

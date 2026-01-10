@@ -12,6 +12,9 @@ import type {
     UpdateKnowledgePointData,
 } from '../types/course';
 
+// 重新导出类型供其他模块使用
+export type { Course, KnowledgePoint, CreateCourseData, UpdateCourseData, CreateKnowledgePointData, UpdateKnowledgePointData };
+
 // Configure axios instance
 const api = axios.create({
     baseURL: '/api',
@@ -103,5 +106,14 @@ export const courseService = {
      */
     async deleteKnowledgePoint(courseId: number, kpId: number): Promise<void> {
         await api.delete(`/courses/${courseId}/knowledge-points/${kpId}`);
+    },
+
+    // 别名方法
+    list: async function (): Promise<Course[]> {
+        return this.getCourses();
+    },
+
+    listKnowledgePoints: async function (courseId: number): Promise<KnowledgePoint[]> {
+        return this.getKnowledgePoints(courseId);
     },
 };

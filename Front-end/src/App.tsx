@@ -12,6 +12,7 @@ import { LoadingScreen } from '@/components/UI';
 import { LoginPage, RegisterPage } from '@/pages/auth';
 import { CourseManagementPage } from '@/pages/course/CourseManagementPage';
 import { ExamListPage, CreateExamPage, ExamDetailPage, TakeExamPage } from '@/pages/exam';
+import { QuestionBankPage } from '@/pages/question-bank';
 
 /**
  * 主应用组件
@@ -143,6 +144,8 @@ function App() {
           </div>
         ) : currentPage === 'courses' ? (
           <CourseManagementPage />
+        ) : currentPage === 'question-bank' ? (
+          <QuestionBankPage />
         ) : currentPage === 'exams' ? (
           <ExamListPage onNavigate={handlePageChange} />
         ) : currentPage === 'exam-create' ? (
