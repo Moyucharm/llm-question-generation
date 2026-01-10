@@ -269,10 +269,18 @@ pnpm check
 
 ### 智能路由系统
 
-基于状态的自动路由切换，无需手动导航：
-- 根据应用状态自动切换页面（生成→答题→结果）
-- 支持流式生成过程中的实时页面跳转
-- 完整的状态恢复和错误处理机制
+系统采用“状态机 + URL 同步”的路由方案：
+- 出题闭环（生成→答题→结果）由 `src/router/AppRouter.tsx` 根据状态自动切换，并同步 URL 到 `/generation`、`/quiz`、`/result`
+- 仪表盘/课程/题库/考试等业务页面由 `src/App.tsx` 维护 URL（History API，无 React Router）
+
+### URL 路径
+
+- `/login`、`/register`
+- `/dashboard`（登录后默认）
+- `/courses`
+- `/question-bank`
+- `/exams`、`/exams/create`、`/exams/:id`、`/exams/:id/take`
+- `/generation`、`/quiz`、`/result`
 
 ### 流式渲染技术
 
@@ -575,7 +583,7 @@ A: 项目内置了专门的提示词工程，针对不同题型优化了生成�
 A: 前端部分支持离线使用，但AI功能需要网络连接。未配置LLM时会使用本地模拟API。
 
 ### Q: 如何自定义题型？
-A: 可以在 `src/types/index.ts` 中添加新的题型定义，然后在 `src/components/questions/` 中实现对应的组件。
+A: 可以在 `src/types/index.ts` 中添加新的题型定义，然后在 `src/components/Question/questions/` 中实现对应的组件。
 
 ## 📚 模块文档导航
 
@@ -635,7 +643,7 @@ A: 可以在 `src/types/index.ts` 中添加新的题型定义，然后在 `src/c
   <p>Made with ❤️ by JacksonHe04</p>
   <p><strong>QGen</strong> - 让AI为教育赋能，让学习更加智能高效！</p>
   <br>
-  <p>📅 <strong>文档最后更新</strong>: 2025年7月29日</p>
+  <p>📅 <strong>文档最后更新</strong>: 2026年1月10日</p>
   <p>🔄 <strong>最新版本</strong>: v2.0.0 (性能优化版)</p>
   <p>👨‍💻 <strong>维护者</strong>: JacksonHe04</p>
 </div>

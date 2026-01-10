@@ -464,6 +464,8 @@ curl http://localhost:8000/api/questions/types
 | POST | `/api/exams/{id}/submit` | 提交考试 | 是 | 学生 |
 | GET | `/api/exams/{id}/attempts` | 查看所有答题记录 | 是 | 教师 |
 
+> 学生端获取考试列表时，响应会包含 `can_start` 字段，用于表示当前时间窗口内是否允许开始考试。
+
 <details>
 <summary>📝 考试管理API示例</summary>
 
@@ -491,6 +493,27 @@ curl -X POST http://localhost:8000/api/exams/1/questions \
     "score": 10
   }'
 ```
+
+**从题库添加题目到考试（复用已有题目）**
+```bash
+curl -X POST http://localhost:8000/api/exams/1/questions \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question_id": 123,
+    "score": 10
+  }'
+```
+
+> 说明：`question_id` 存在时将直接复用题库中的题目；`score` 可选，不传则使用题目默认分值。
+
+**开始考试（会校验开始/结束时间窗口）**
+```bash
+curl -X POST http://localhost:8000/api/exams/1/start \
+  -H "Authorization: Bearer <token>"
+```
+
+> 若未到开始时间或已超过结束时间，接口会返回 `400` 并给出中文错误原因（例如“考试尚未开始 / 考试已结束”）。
 
 **响应示例**
 ```json
@@ -601,4 +624,4 @@ MIT License
 
 **开发状态**: 🚧 开发中
 **版本**: v1.1.0
-**最后更新**: 2026-01-09
+**最后更新**: 2026-01-10

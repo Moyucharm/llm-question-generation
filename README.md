@@ -41,6 +41,15 @@ pnpm dev                       # 启动服务 (端口 3000)
 
 访问 http://localhost:3000 即可使用。
 
+### 常用页面
+
+- `http://localhost:3000/login` 登录
+- `http://localhost:3000/register` 注册
+- `http://localhost:3000/dashboard` 仪表盘（登录后默认）
+- `http://localhost:3000/exams` 考试列表
+- `http://localhost:3000/question-bank` 题库管理
+- `http://localhost:3000/generation` AI 出题（会自动切换到 `/quiz`、`/result`）
+
 ## 项目结构
 
 ```

@@ -45,10 +45,23 @@ pnpm check
 
 ## 路由与页面扩展
 
-1. 在 `src/pages/` 下创建新页面目录，提供 `index.tsx` 作为页面入口。
-2. 在 `src/router/AppRouter.tsx` 注册路由：
-   - 定义路由路径、组件懒加载（如需）、以及必要的布局包装。
-3. 如需共享状态或日志，请在页面中使用相应的 store 或 `LogPanelProvider`。
+当前前端路由分为两层：
+
+1. **应用级（URL → 页面）**：`src/App.tsx` 使用 History API 维护 URL（不依赖 React Router），负责仪表盘、课程、题库、考试等“业务页面”的进入与返回。
+2. **出题闭环（状态 → 页面）**：`src/router/AppRouter.tsx` 根据出题状态机（生成/答题/结果）自动切换页面，并同步 URL 到 `/generation`、`/quiz`、`/result`。
+
+新增页面时按类型选择接入点：
+
+- **仪表盘侧边栏类页面**（例如：新增 `/analytics`）：
+  1) 在 `src/pages/` 下创建页面目录与入口组件  
+  2) 在 `src/App.tsx` 中补充 `applyPathname()` 与 `getPathForPage()` 的映射  
+  3) 在 `src/components/Layout/Sidebar.tsx` 中加入菜单项（如需要）
+
+- **出题闭环内页面**（例如：新增新的答题态）：
+  1) 在 `src/pages/` 下创建页面组件  
+  2) 在 `src/router/AppRouter.tsx` 的状态分支中接入并同步 URL  
+
+如需共享状态或日志，请在页面中使用相应的 store 或 `LogPanelProvider`。
 
 建议：页面内将 UI 组件抽离至 `pages/<page>/components/`；将业务逻辑抽离至 `pages/<page>/hooks/`，保持关注点分离。
 
