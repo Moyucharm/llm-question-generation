@@ -1,4 +1,4 @@
-# QuAIz 项目每日完成需求记录
+# QGen 项目每日完成需求记录
 
 ## 2025-07-29
 
@@ -206,8 +206,8 @@
   - 新增QuestionPreset类型定义
 
 - 更新项目配置和资源文件
-  - 更新Vercel项目配置，替换默认图标和标题为QuAIz相关资源
-  - 删除旧的vite.svg图标，添加新的quaiz-logo.svg
+  - 更新Vercel项目配置，替换默认图标和标题为QGen相关资源
+  - 删除旧的vite.svg图标，添加新的qgen-logo.svg
   - 将页面语言从英文改为中文
 
 ## 2025-07-20
@@ -227,7 +227,7 @@
 
 ## 2025-07-19
 
-- 初始化 QuAIz 项目基础架构
+- 初始化 QGen 项目基础架构
   - 初始化 React + TypeScript + Vite 项目配置
   - 添加 TailwindCSS 和 Zustand 依赖
   - 实现核心组件：题目渲染器、路由和状态管理

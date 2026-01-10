@@ -1,6 +1,6 @@
 # TimeRecorder 时间记录组件模块
 
-TimeRecorder 模块是 QuAIz 应用中负责记录和显示题目生成时间的核心组件模块，为用户提供透明的生成过程时间反馈和性能监控功能。
+TimeRecorder 模块是 QGen 应用中负责记录和显示题目生成时间的核心组件模块，为用户提供透明的生成过程时间反馈和性能监控功能。
 
 ## 📁 目录结构
 
@@ -460,6 +460,6 @@ timeRecorderTest.testComponentDisplayLogic();
 ## 👨‍💻 开发者
 
 - **作者**: JacksonHe04
-- **项目**: QuAIz - AI 智能刷题系统
+- **项目**: QGen - AI 智能刷题系统
 - **模块**: 时间记录和性能监控核心组件
 - **设计理念**: 精确计时、状态同步、性能优化

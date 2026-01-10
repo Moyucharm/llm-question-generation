@@ -1,6 +1,6 @@
-# QuAIz - 基于大模型的智能试卷生成+刷题+批改
+# QGen - 基于大模型的智能试卷生成+刷题+批改
 
-[![Version](https://img.shields.io/badge/version-v2.0.0-blue.svg)](https://github.com/JacksonHe04/QuAIz)
+[![Version](https://img.shields.io/badge/version-v2.0.0-blue.svg)](https://github.com/JacksonHe04/QGen)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178c6.svg)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-7-646cff.svg)](https://vitejs.dev/)
@@ -8,7 +8,7 @@
 
 ## 📖 项目简介
 
-QuAIz是一个现代化的AI驱动的在线出题系统，支持多种题型的智能生成、在线答题和自动批改。用户只需简单配置需求，AI就能生成个性化的试卷，并在答题完成后提供详细的批改反馈。项目采用React 19 + TypeScript + Vite技术栈，具备完整的流式渲染能力和响应式设计。
+QGen是一个现代化的AI驱动的在线出题系统，支持多种题型的智能生成、在线答题和自动批改。用户只需简单配置需求，AI就能生成个性化的试卷，并在答题完成后提供详细的批改反馈。项目采用React 19 + TypeScript + Vite技术栈，具备完整的流式渲染能力和响应式设计。
 
 ## ✨ 核心特性
 
@@ -54,9 +54,9 @@ QuAIz是一个现代化的AI驱动的在线出题系统，支持多种题型的�
 ## 📁 项目结构
 
 ```
-QuAIz/
+QGen/
 ├── public/                    # 静态资源
-│   └── quaiz-logo.svg        # 项目Logo
+│   └── qgen-logo.svg        # 项目Logo
 ├── src/
 │   ├── components/            # 可复用组件模块 📋
 │   │   ├── FloatingButton/   # 浮动按钮组件系统
@@ -319,7 +319,7 @@ VITE_LLM_TIMEOUT=30000
 ```typescript
 export const APP_CONFIG = {
   // 应用基本信息
-  name: 'QuAIz',
+  name: 'QGen',
   version: '1.0.0',
   
   // 题目配置
@@ -607,9 +607,9 @@ A: 可以在 `src/types/index.ts` 中添加新的题型定义，然后在 `src/c
 ## 🔗 相关链接
 
 - [项目文档](docs/)
-- [在线演示](https://quaiz-ai.vercel.app)
-- [问题反馈](https://github.com/JacksonHe04/QuAIz/issues)
-- [功能建议](https://github.com/JacksonHe04/QuAIz/discussions)
+- [在线演示](https://qgen-ai.vercel.app)
+- [问题反馈](https://github.com/JacksonHe04/QGen/issues)
+- [功能建议](https://github.com/JacksonHe04/QGen/discussions)
 
 ## 📄 许可证
 
@@ -631,7 +631,7 @@ A: 可以在 `src/types/index.ts` 中添加新的题型定义，然后在 `src/c
 <div align="center">
   <p>如果这个项目对你有帮助，请给它一个 ⭐️</p>
   <p>Made with ❤️ by JacksonHe04</p>
-  <p><strong>QuAIz</strong> - 让AI为教育赋能，让学习更加智能高效！</p>
+  <p><strong>QGen</strong> - 让AI为教育赋能，让学习更加智能高效！</p>
   <br>
   <p>📅 <strong>文档最后更新</strong>: 2025年7月29日</p>
   <p>🔄 <strong>最新版本</strong>: v2.0.0 (性能优化版)</p>

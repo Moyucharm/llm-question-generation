@@ -349,8 +349,8 @@ Date: 2025-07-21
 Message:
 chore: 更新项目配置和资源文件
 
-更新Vercel项目配置，替换默认图标和标题为QuAIz相关资源
-删除旧的vite.svg图标，添加新的quaiz-logo.svg
+更新Vercel项目配置，替换默认图标和标题为QGen相关资源
+删除旧的vite.svg图标，添加新的qgen-logo.svg
 将页面语言从英文改为中文
 
 -------------------------
@@ -378,7 +378,7 @@ feat(llm): 实现LLM模块集成与试卷生成批改功能
 -------------------------
 Date: 2025-07-19
 Message:
-feat: 初始化 QuAIz 项目基础架构
+feat: 初始化 QGen 项目基础架构
 
 添加项目基础文件结构，包括：
 1. 初始化 React + TypeScript + Vite 项目配置

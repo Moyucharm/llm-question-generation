@@ -16,7 +16,7 @@ import { QuestionBankPage } from '@/pages/question-bank';
 
 /**
  * 主应用组件
- * QuAIz - AI智能出题系统
+ * QGen - AI智能出题系统
  */
 function App() {
   const { generation, nextQuestion, previousQuestion, submitQuiz, startGrading } = useAppStore();

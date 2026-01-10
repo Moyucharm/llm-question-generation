@@ -73,7 +73,7 @@ cd Front-end && pnpm dev
 
 ```
 bishe/
-├── Front-end/              # React前端 (QuAIz)
+├── Front-end/              # React前端 (QGen)
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Layout/     # 仪表板布局 (Sidebar, TopBar, DashboardLayout)

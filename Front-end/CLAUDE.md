@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-QuAIz is a modern AI-driven online quiz generation and grading system built with React 19, TypeScript, and Vite. The application allows users to generate personalized quizzes through AI, take the quizzes online, and receive automated grading with detailed feedback.
+QGen is a modern AI-driven online quiz generation and grading system built with React 19, TypeScript, and Vite. The application allows users to generate personalized quizzes through AI, take the quizzes online, and receive automated grading with detailed feedback.
 
 Key features include:
 - AI-powered quiz generation with multiple question types

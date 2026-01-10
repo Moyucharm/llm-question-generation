@@ -1,6 +1,6 @@
 # Components 组件模块
 
-本目录包含 QuAIz 应用的共享 UI 组件，提供可复用的界面元素和功能组件。
+本目录包含 QGen 应用的共享 UI 组件，提供可复用的界面元素和功能组件。
 
 ## 📁 目录结构
 
@@ -270,5 +270,5 @@ import { StreamingQuestionRenderer } from '@/components/Question/StreamingQuesti
 ## 👨‍💻 开发者
 
 - **作者**: JacksonHe04
-- **项目**: QuAIz - AI 智能刷题系统
+- **项目**: QGen - AI 智能刷题系统
 - **设计理念**: 组件化、可复用、类型安全

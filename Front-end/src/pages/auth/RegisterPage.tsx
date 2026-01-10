@@ -84,7 +84,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) =
   };
 
   return (
-    <AuthLayout title="创建账号" subtitle="注册以开始使用 QuAIz">
+    <AuthLayout title="创建账号" subtitle="注册以开始使用 QGen">
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* 错误提示 */}
         {error && (

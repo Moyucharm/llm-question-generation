@@ -1,6 +1,6 @@
 import type { QuestionPreset, QuestionConfig } from '@/types';
 
-const PRESETS_STORAGE_KEY = 'quaiz_question_presets';
+const PRESETS_STORAGE_KEY = 'qgen_question_presets';
 
 /**
  * 获取所有保存的预设方案

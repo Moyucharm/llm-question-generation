@@ -1,6 +1,6 @@
 # Stores 状态管理模块
 
-本目录包含 QuAIz 应用的全局状态管理，使用 Zustand 实现轻量级、类型安全的状态管理。
+本目录包含 QGen 应用的全局状态管理，使用 Zustand 实现轻量级、类型安全的状态管理。
 
 ## 📁 目录结构
 
@@ -186,5 +186,5 @@ const questionGenerators = {
 ## 👨‍💻 开发者
 
 - **作者**: JacksonHe04
-- **项目**: QuAIz - AI 智能刷题系统
+- **项目**: QGen - AI 智能刷题系统
 - **架构**: 基于 Zustand 的模块化状态管理

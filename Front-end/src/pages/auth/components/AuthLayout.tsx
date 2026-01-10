@@ -32,7 +32,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
 
         {/* 底部版权 */}
         <div className="text-center mt-6 text-sm text-gray-400">
-          QuAIz - AI 智能出题系统
+          QGen - AI 智能出题系统
         </div>
       </div>
     </div>

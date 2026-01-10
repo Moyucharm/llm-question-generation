@@ -5,7 +5,7 @@
 
 export const APP_CONFIG = {
   // 应用基本信息
-  name: 'QuAIz',
+  name: 'QGen',
   version: '1.0.0',
   description: 'AI智能出题系统 - Quiz You by AI Zipply',
 

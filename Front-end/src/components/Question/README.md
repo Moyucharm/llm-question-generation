@@ -1,6 +1,6 @@
 # Question 题目组件模块
 
-Question 模块是 QuAIz 应用中负责题目渲染和交互的核心组件模块，提供多种题型的统一渲染接口和丰富的交互功能。
+Question 模块是 QGen 应用中负责题目渲染和交互的核心组件模块，提供多种题型的统一渲染接口和丰富的交互功能。
 
 ## 📁 目录结构
 
@@ -399,5 +399,5 @@ registerQuestionType('custom', CustomQuestion);
 ## 👨‍💻 开发者
 
 - **作者**: JacksonHe04
-- **项目**: QuAIz - AI 智能刷题系统
+- **项目**: QGen - AI 智能刷题系统
 - **模块**: 题目渲染和交互核心组件

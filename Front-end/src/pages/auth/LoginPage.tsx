@@ -54,7 +54,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
   };
 
   return (
-    <AuthLayout title="欢迎回来" subtitle="登录以继续使用 QuAIz">
+    <AuthLayout title="欢迎回来" subtitle="登录以继续使用 QGen">
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* 错误提示 */}
         {error && (
