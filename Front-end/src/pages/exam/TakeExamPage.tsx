@@ -3,7 +3,13 @@
  * 显示考试题目，支持答题和提交
  */
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import {
   ArrowLeft,
   Clock,
@@ -19,7 +25,7 @@ import { useExamStore } from '@/stores/useExamStore';
 
 interface TakeExamPageProps {
   examId: number;
-  onNavigate?: (page: string) => void;
+  onNavigate?: (page: string, examId?: number) => void;
 }
 
 interface QuestionAnswer {
@@ -49,7 +55,11 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
   const [isCompleted, setIsCompleted] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true); // 防止闪烁
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [timeInitialized, setTimeInitialized] = useState(false);
+
+  // 用于追踪输入框焦点状态
+  const isInputFocused = useRef(false);
 
   // 初始化考试
   useEffect(() => {
@@ -71,29 +81,39 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
     initExam();
   }, [examId, fetchExam, startExam]);
 
-  // 同步剩余时间
+  // 同步剩余时间（只在初始化时设置一次，避免每次保存答案后重置）
   useEffect(() => {
-    if (currentAttempt?.remaining_seconds) {
+    if (currentAttempt?.remaining_seconds && !timeInitialized) {
       setRemainingTime(currentAttempt.remaining_seconds);
+      setTimeInitialized(true);
     }
-  }, [currentAttempt]);
+  }, [currentAttempt?.remaining_seconds, timeInitialized]);
 
-  // 倒计时
+  // 倒计时（使用 useRef 避免重复创建定时器）
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     if (remainingTime === null || remainingTime <= 0) return;
 
-    const timer = setInterval(() => {
+    // 清除之前的定时器
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+
+    timerRef.current = setInterval(() => {
       setRemainingTime(prev => {
-        if (prev === null || prev <= 0) {
-          clearInterval(timer);
+        if (prev === null || prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [remainingTime]);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeInitialized]);
 
   // 格式化时间
   const formatTime = useCallback((seconds: number) => {
@@ -110,32 +130,56 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
   const questions = currentExam?.questions || [];
   const currentQuestion = questions[currentIndex];
 
+  // 获取填空题的空数量
+  const getBlankCount = useCallback(
+    (question: (typeof questions)[0] | undefined) => {
+      if (!question || question.type !== 'blank') return 1;
+      const answer = question.answer as { blanks?: string[] } | undefined;
+      if (answer?.blanks && Array.isArray(answer.blanks)) {
+        return answer.blanks.length;
+      }
+      const matches = question.stem.match(/_{2,}/g);
+      return matches ? matches.length : 1;
+    },
+    []
+  );
+
   // 已答题数
   const answeredCount = useMemo(() => {
     return Object.keys(answers).filter(id => {
       const ans = answers[parseInt(id)];
-      return ans && (Array.isArray(ans) ? ans.length > 0 : ans.trim() !== '');
+      if (Array.isArray(ans)) {
+        return ans.some(a => a && a.trim() !== '');
+      }
+      return ans && typeof ans === 'string' && ans.trim() !== '';
     }).length;
   }, [answers]);
 
-  // 处理答案变化
+  // 处理答案变化（防抖保存）
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleAnswerChange = useCallback(
-    async (questionId: number, answer: string | string[]) => {
+    (questionId: number, answer: string | string[]) => {
       setAnswers(prev => ({ ...prev, [questionId]: answer }));
-      try {
-        await saveAnswer(examId, { question_id: questionId, answer });
-      } catch (e) {
-        console.error('保存答案失败:', e);
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          await saveAnswer(examId, { question_id: questionId, answer });
+        } catch (e) {
+          console.error('保存答案失败:', e);
+        }
+      }, 500);
     },
     [examId, saveAnswer]
   );
 
   // 点击提交按钮
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     if (isSubmitting) return;
     setShowConfirmModal(true);
-  };
+  }, [isSubmitting]);
 
   // 实际执行提交
   const doSubmit = useCallback(async () => {
@@ -143,9 +187,9 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
     setIsSubmitting(true);
     try {
       await submitExam(examId);
-      setSubmitMessage('考试已提交！');
+      setSubmitMessage('考试已提交！正在跳转到成绩页面...');
       setTimeout(() => {
-        onNavigate?.('exams');
+        onNavigate?.('exam-result', examId);
       }, 1500);
     } catch {
       setSubmitMessage('提交失败，请重试');
@@ -155,12 +199,49 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
 
   // 自动提交（时间到）
   useEffect(() => {
-    if (remainingTime === 0) {
+    if (remainingTime === 0 && !isSubmitting) {
       void doSubmit();
     }
-  }, [doSubmit, remainingTime]);
+  }, [doSubmit, remainingTime, isSubmitting]);
 
-  // 加载中或初始化中
+  // 键盘快捷键
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isInputFocused.current) return;
+      if (showConfirmModal || submitMessage) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          e.preventDefault();
+          setCurrentIndex(i => Math.max(0, i - 1));
+          break;
+        case 'ArrowRight':
+        case 'ArrowDown':
+          e.preventDefault();
+          setCurrentIndex(i => Math.min(questions.length - 1, i + 1));
+          break;
+        case 'Enter':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            handleSubmit();
+          }
+          break;
+        default:
+          if (e.key >= '1' && e.key <= '9') {
+            const num = parseInt(e.key);
+            if (num <= questions.length) {
+              e.preventDefault();
+              setCurrentIndex(num - 1);
+            }
+          }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [questions.length, showConfirmModal, submitMessage, handleSubmit]);
+
   if (isLoadingExam || isInitializing) {
     return (
       <div className='max-w-4xl mx-auto'>
@@ -172,7 +253,6 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
     );
   }
 
-  // 已完成考试
   if (isCompleted) {
     return (
       <div className='max-w-4xl mx-auto'>
@@ -184,18 +264,25 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
           <p className='text-gray-500 mb-6'>
             您已经提交过这场考试，不能重复参加。
           </p>
-          <button
-            onClick={() => onNavigate?.('exams')}
-            className='px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700'
-          >
-            返回考试列表
-          </button>
+          <div className='flex gap-3 justify-center'>
+            <button
+              onClick={() => onNavigate?.('exam-result', examId)}
+              className='px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700'
+            >
+              查看成绩
+            </button>
+            <button
+              onClick={() => onNavigate?.('exams')}
+              className='px-6 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200'
+            >
+              返回考试列表
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // 错误
   if (error && !isCompleted) {
     return (
       <div className='max-w-4xl mx-auto'>
@@ -219,7 +306,6 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
     );
   }
 
-  // 无题目
   if (!currentQuestion) {
     return (
       <div className='max-w-4xl mx-auto'>
@@ -238,7 +324,6 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
 
   return (
     <div className='max-w-4xl mx-auto'>
-      {/* 顶部栏 */}
       <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-4'>
@@ -254,6 +339,9 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
               </h1>
               <p className='text-sm text-gray-500'>
                 {answeredCount}/{questions.length} 题已作答
+                <span className='ml-2 text-xs text-gray-400'>
+                  (← → 切换题目)
+                </span>
               </p>
             </div>
           </div>
@@ -274,7 +362,6 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
         </div>
       </div>
 
-      {/* 题目卡片 */}
       <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4'>
         <div className='flex items-center gap-3 mb-4'>
           <span className='flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full text-sm font-medium'>
@@ -300,10 +387,13 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
           question={currentQuestion}
           value={answers[currentQuestion.id]}
           onChange={val => handleAnswerChange(currentQuestion.id, val)}
+          blankCount={getBlankCount(currentQuestion)}
+          onFocusChange={focused => {
+            isInputFocused.current = focused;
+          }}
         />
       </div>
 
-      {/* 底部导航 */}
       <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4'>
         <div className='flex items-center justify-between'>
           <button
@@ -348,7 +438,6 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
           )}
         </div>
 
-        {/* 提交按钮 */}
         <div className='mt-4 flex justify-center'>
           <button
             onClick={handleSubmit}
@@ -361,7 +450,6 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
         </div>
       </div>
 
-      {/* 确认提交弹窗 */}
       {showConfirmModal && (
         <div className='fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50'>
           <div className='bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4'>
@@ -395,7 +483,6 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
         </div>
       )}
 
-      {/* 提交结果消息 */}
       {submitMessage && (
         <div className='fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50'>
           <div className='bg-white rounded-lg shadow-xl p-8 max-w-sm w-full mx-4 text-center'>
@@ -426,17 +513,24 @@ interface QuestionInputProps {
   question: {
     id: number;
     type: string;
+    stem: string;
     options?: Record<string, string>;
+    answer?: unknown;
   };
   value?: string | string[];
   onChange: (value: string | string[]) => void;
+  blankCount?: number;
+  onFocusChange?: (focused: boolean) => void;
 }
 
 const QuestionInput: React.FC<QuestionInputProps> = ({
   question,
   value,
   onChange,
+  blankCount = 1,
+  onFocusChange,
 }) => {
+  // 单选题
   if (question.type === 'single' && question.options) {
     return (
       <div className='space-y-2'>
@@ -467,6 +561,7 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
     );
   }
 
+  // 多选题
   if (question.type === 'multiple' && question.options) {
     const selectedArr = Array.isArray(value) ? value : [];
     return (
@@ -502,22 +597,67 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
     );
   }
 
+  // 填空题（支持多个空）
   if (question.type === 'blank') {
+    const blanksValue = Array.isArray(value)
+      ? value
+      : typeof value === 'string' && value
+        ? [value]
+        : Array(blankCount).fill('');
+
+    while (blanksValue.length < blankCount) {
+      blanksValue.push('');
+    }
+
+    const handleBlankChange = (index: number, newValue: string) => {
+      const newBlanks = [...blanksValue];
+      newBlanks[index] = newValue;
+      onChange(newBlanks);
+    };
+
+    if (blankCount === 1) {
+      return (
+        <input
+          type='text'
+          value={blanksValue[0] || ''}
+          onChange={e => onChange([e.target.value])}
+          onFocus={() => onFocusChange?.(true)}
+          onBlur={() => onFocusChange?.(false)}
+          placeholder='请输入答案...'
+          className='w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+        />
+      );
+    }
+
     return (
-      <input
-        type='text'
-        value={typeof value === 'string' ? value : ''}
-        onChange={e => onChange(e.target.value)}
-        placeholder='请输入答案...'
-        className='w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-      />
+      <div className='space-y-3'>
+        {Array.from({ length: blankCount }).map((_, index) => (
+          <div key={index} className='flex items-center gap-3'>
+            <span className='flex-shrink-0 w-8 h-8 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center text-sm font-medium'>
+              {index + 1}
+            </span>
+            <input
+              type='text'
+              value={blanksValue[index] || ''}
+              onChange={e => handleBlankChange(index, e.target.value)}
+              onFocus={() => onFocusChange?.(true)}
+              onBlur={() => onFocusChange?.(false)}
+              placeholder={`请输入第 ${index + 1} 空的答案...`}
+              className='flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+            />
+          </div>
+        ))}
+      </div>
     );
   }
 
+  // 简答题
   return (
     <textarea
       value={typeof value === 'string' ? value : ''}
       onChange={e => onChange(e.target.value)}
+      onFocus={() => onFocusChange?.(true)}
+      onBlur={() => onFocusChange?.(false)}
       placeholder='请输入答案...'
       rows={6}
       className='w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'

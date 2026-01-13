@@ -63,6 +63,7 @@ class User(Base, TimestampMixin):
     attempts: Mapped[List["Attempt"]] = relationship(
         "Attempt",
         back_populates="student",
+        foreign_keys="Attempt.student_id",
     )
 
     def __repr__(self) -> str:

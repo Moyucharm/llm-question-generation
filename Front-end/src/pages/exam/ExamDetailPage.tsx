@@ -3,7 +3,7 @@
  * 支持查看/编辑考试信息、添加题目、发布考试
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   ArrowLeft,
   Play,
@@ -15,18 +15,28 @@ import {
   Edit2,
   Check,
   X,
+  Users,
+  ChevronRight,
+  GripVertical,
+  Save,
 } from 'lucide-react';
 import { useExamStore } from '@/stores/useExamStore';
-import type { ExamQuestion, UpdateExamRequest } from '@/types/exam';
+import type { ExamQuestion, UpdateExamRequest, Attempt } from '@/types/exam';
 import {
   questionBankService,
   getQuestionTypeLabel,
 } from '@/services/questionBankService';
+import {
+  getExamAttempts,
+  removeQuestionFromExam,
+  updateQuestionScore,
+  reorderExamQuestions,
+} from '@/services/examService';
 import type { Question } from '@/services/questionBankService';
 
 interface ExamDetailPageProps {
   examId: number;
-  onNavigate?: (page: string) => void;
+  onNavigate?: (page: string, examId?: number, attemptId?: number) => void;
 }
 
 export const ExamDetailPage: React.FC<ExamDetailPageProps> = ({
@@ -52,9 +62,36 @@ export const ExamDetailPage: React.FC<ExamDetailPageProps> = ({
   >(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // 答卷列表状态
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
+  const [showAttempts, setShowAttempts] = useState(false);
+
   useEffect(() => {
     fetchExam(examId);
   }, [examId, fetchExam]);
+
+  // 加载答卷列表
+  const loadAttempts = async () => {
+    if (attemptsLoading) return;
+    setAttemptsLoading(true);
+    try {
+      const data = await getExamAttempts(examId);
+      setAttempts(data.items);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : '获取答卷列表失败');
+    } finally {
+      setAttemptsLoading(false);
+    }
+  };
+
+  // 切换答卷列表显示
+  const toggleAttempts = () => {
+    if (!showAttempts && attempts.length === 0) {
+      loadAttempts();
+    }
+    setShowAttempts(!showAttempts);
+  };
 
   // 初始化编辑表单
   useEffect(() => {
@@ -274,46 +311,98 @@ export const ExamDetailPage: React.FC<ExamDetailPageProps> = ({
       )}
 
       {/* 题目列表 */}
-      <div className='bg-white rounded-lg shadow-sm border border-gray-200'>
-        <div className='p-4 border-b border-gray-200 flex items-center justify-between'>
-          <h2 className='text-lg font-semibold text-gray-900'>题目列表</h2>
-          {isDraft && (
-            <button
-              onClick={() => setShowAddQuestion(true)}
-              className='flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700'
-            >
-              <Plus className='w-4 h-4' />
-              添加题目
-            </button>
+      <QuestionList
+        examId={examId}
+        questions={currentExam.questions || []}
+        canEdit={isDraft}
+        onAddQuestion={() => setShowAddQuestion(true)}
+        onRefresh={() => fetchExam(examId)}
+      />
+
+      {/* 答卷管理区域（教师功能） */}
+      {(isPublished || currentExam.status === 'closed') && (
+        <div className='bg-white rounded-lg shadow-sm border border-gray-200 mt-6'>
+          <div
+            className='p-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50'
+            onClick={toggleAttempts}
+          >
+            <div className='flex items-center gap-2'>
+              <Users className='w-5 h-5 text-blue-600' />
+              <h2 className='text-lg font-semibold text-gray-900'>
+                答卷管理
+              </h2>
+              <span className='px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full'>
+                {currentExam.attempt_count || 0} 份
+              </span>
+            </div>
+            <ChevronRight
+              className={`w-5 h-5 text-gray-400 transition-transform ${
+                showAttempts ? 'rotate-90' : ''
+              }`}
+            />
+          </div>
+
+          {showAttempts && (
+            <div className='p-4'>
+              {attemptsLoading ? (
+                <div className='text-center py-8'>
+                  <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto'></div>
+                  <p className='text-gray-500 mt-2'>加载中...</p>
+                </div>
+              ) : attempts.length === 0 ? (
+                <div className='text-center py-8 text-gray-500'>
+                  <Users className='w-12 h-12 mx-auto mb-2 text-gray-300' />
+                  <p>暂无答卷</p>
+                </div>
+              ) : (
+                <div className='divide-y divide-gray-100'>
+                  {attempts.map(attempt => (
+                    <div
+                      key={attempt.id}
+                      className='py-3 flex items-center justify-between hover:bg-gray-50 px-2 rounded cursor-pointer'
+                      onClick={() => onNavigate?.('exam-grade', examId, attempt.id)}
+                    >
+                      <div className='flex items-center gap-3'>
+                        <div className='w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium'>
+                          {attempt.student_name?.[0] || '?'}
+                        </div>
+                        <div>
+                          <p className='font-medium text-gray-900'>
+                            {attempt.student_name || '未知学生'}
+                          </p>
+                          <p className='text-xs text-gray-500'>
+                            提交时间:{' '}
+                            {attempt.submitted_at
+                              ? new Date(attempt.submitted_at).toLocaleString()
+                              : '未提交'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className='flex items-center gap-3'>
+                        <div className='text-right'>
+                          <p className='font-bold text-lg text-blue-600'>
+                            {attempt.total_score ?? '--'}
+                          </p>
+                          <p className='text-xs text-gray-400'>
+                            {attempt.is_graded_by_teacher ? (
+                              <span className='text-green-600'>已批改</span>
+                            ) : attempt.status === 'submitted' || attempt.status === 'ai_graded' || attempt.status === 'graded' ? (
+                              <span className='text-yellow-600'>待批改</span>
+                            ) : (
+                              <span className='text-gray-400'>进行中</span>
+                            )}
+                          </p>
+                        </div>
+                        <ChevronRight className='w-5 h-5 text-gray-300' />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
-
-        {currentExam.questions && currentExam.questions.length > 0 ? (
-          <div className='divide-y divide-gray-100'>
-            {currentExam.questions.map((question, index) => (
-              <QuestionItem
-                key={question.id}
-                question={question}
-                index={index}
-                canEdit={isDraft}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className='p-12 text-center text-gray-500'>
-            <FileText className='w-12 h-12 mx-auto mb-4 text-gray-300' />
-            <p>暂无题目</p>
-            {isDraft && (
-              <button
-                onClick={() => setShowAddQuestion(true)}
-                className='mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700'
-              >
-                添加第一道题目
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* 添加题目弹窗 */}
       {showAddQuestion && (
@@ -382,18 +471,38 @@ export const ExamDetailPage: React.FC<ExamDetailPageProps> = ({
   );
 };
 
-// 题目项组件
-interface QuestionItemProps {
-  question: ExamQuestion;
-  index: number;
+// 题目列表组件（支持拖动排序和编辑分值）
+interface QuestionListProps {
+  examId: number;
+  questions: ExamQuestion[];
   canEdit: boolean;
+  onAddQuestion: () => void;
+  onRefresh: () => void;
 }
 
-const QuestionItem: React.FC<QuestionItemProps> = ({
-  question,
-  index,
+const QuestionList: React.FC<QuestionListProps> = ({
+  examId,
+  questions,
   canEdit,
+  onAddQuestion,
+  onRefresh,
 }) => {
+  const [localQuestions, setLocalQuestions] = useState<ExamQuestion[]>(questions);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editScore, setEditScore] = useState<number>(0);
+  const [isDeleting, setIsDeleting] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasOrderChanged, setHasOrderChanged] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 同步外部数据
+  useEffect(() => {
+    setLocalQuestions(questions);
+    setHasOrderChanged(false);
+  }, [questions]);
+
   const typeLabels: Record<string, string> = {
     single: '单选题',
     multiple: '多选题',
@@ -401,36 +510,254 @@ const QuestionItem: React.FC<QuestionItemProps> = ({
     short: '简答题',
   };
 
+  // 开始编辑分值
+  const handleStartEdit = (question: ExamQuestion) => {
+    setEditingId(question.id);
+    setEditScore(question.score);
+  };
+
+  // 保存分值
+  const handleSaveScore = async (questionId: number) => {
+    try {
+      setIsSaving(true);
+      await updateQuestionScore(examId, questionId, editScore);
+      setEditingId(null);
+      onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 删除题目
+  const handleDelete = async (questionId: number) => {
+    try {
+      setIsDeleting(questionId);
+      await removeQuestionFromExam(examId, questionId);
+      onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '删除失败');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  // 拖动开始
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  // 拖动经过
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  // 拖动离开
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  // 拖动结束
+  const handleDrop = (targetIndex: number) => {
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newQuestions = [...localQuestions];
+    const [draggedItem] = newQuestions.splice(draggedIndex, 1);
+    newQuestions.splice(targetIndex, 0, draggedItem);
+    setLocalQuestions(newQuestions);
+    setHasOrderChanged(true);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  // 保存排序
+  const handleSaveOrder = async () => {
+    try {
+      setIsSaving(true);
+      const orders = localQuestions.map((q, index) => ({
+        question_id: q.id,
+        order: index + 1,
+      }));
+      await reorderExamQuestions(examId, orders);
+      setHasOrderChanged(false);
+      onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存排序失败');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className='p-4 hover:bg-gray-50'>
-      <div className='flex items-start gap-4'>
-        <span className='flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium'>
-          {index + 1}
-        </span>
-        <div className='flex-1 min-w-0'>
-          <div className='flex items-center gap-2 mb-1'>
-            <span className='px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded'>
-              {typeLabels[question.type] || question.type}
-            </span>
-            <span className='text-sm text-gray-400'>{question.score} 分</span>
-          </div>
-          <p className='text-gray-900 line-clamp-2'>{question.stem}</p>
-          {question.options && (
-            <div className='mt-2 text-sm text-gray-500'>
-              {Object.entries(question.options).map(([key, value]) => (
-                <div key={key} className='ml-4'>
-                  {key}. {value}
-                </div>
-              ))}
-            </div>
+    <div className='bg-white rounded-lg shadow-sm border border-gray-200'>
+      <div className='p-4 border-b border-gray-200 flex items-center justify-between'>
+        <h2 className='text-lg font-semibold text-gray-900'>题目列表</h2>
+        <div className='flex items-center gap-2'>
+          {hasOrderChanged && canEdit && (
+            <button
+              onClick={handleSaveOrder}
+              disabled={isSaving}
+              className='flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50'
+            >
+              <Save className='w-4 h-4' />
+              {isSaving ? '保存中...' : '保存排序'}
+            </button>
+          )}
+          {canEdit && (
+            <button
+              onClick={onAddQuestion}
+              className='flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700'
+            >
+              <Plus className='w-4 h-4' />
+              添加题目
+            </button>
           )}
         </div>
-        {canEdit && (
-          <button className='p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg'>
-            <Trash2 className='w-4 h-4' />
-          </button>
-        )}
       </div>
+
+      {error && (
+        <div className='mx-4 mt-4 bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-sm flex justify-between items-center'>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className='text-red-400 hover:text-red-600'>✕</button>
+        </div>
+      )}
+
+      {localQuestions.length > 0 ? (
+        <div className='divide-y divide-gray-100'>
+          {localQuestions.map((question, index) => (
+            <div
+              key={question.id}
+              draggable={canEdit}
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={() => handleDrop(index)}
+              onDragEnd={() => { setDraggedIndex(null); setDragOverIndex(null); }}
+              className={`p-4 transition-colors ${
+                draggedIndex === index ? 'opacity-50 bg-blue-50' : ''
+              } ${
+                dragOverIndex === index ? 'bg-blue-100 border-t-2 border-blue-500' : ''
+              } ${canEdit ? 'hover:bg-gray-50' : ''}`}
+            >
+              <div className='flex items-start gap-3'>
+                {/* 拖动手柄 */}
+                {canEdit && (
+                  <div className='flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 pt-1'>
+                    <GripVertical className='w-5 h-5' />
+                  </div>
+                )}
+
+                {/* 序号 */}
+                <span className='flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium'>
+                  {index + 1}
+                </span>
+
+                {/* 题目内容 */}
+                <div className='flex-1 min-w-0'>
+                  <div className='flex items-center gap-2 mb-1'>
+                    <span className='px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded'>
+                      {typeLabels[question.type] || question.type}
+                    </span>
+                    {editingId === question.id ? (
+                      <div className='flex items-center gap-1'>
+                        <input
+                          type='number'
+                          value={editScore}
+                          onChange={(e) => setEditScore(parseInt(e.target.value) || 0)}
+                          min={0}
+                          max={100}
+                          className='w-16 px-2 py-0.5 border border-gray-300 rounded text-sm'
+                          autoFocus
+                        />
+                        <span className='text-sm text-gray-400'>分</span>
+                        <button
+                          onClick={() => handleSaveScore(question.id)}
+                          disabled={isSaving}
+                          className='p-1 text-green-600 hover:bg-green-50 rounded'
+                        >
+                          <Check className='w-4 h-4' />
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className='p-1 text-gray-400 hover:bg-gray-100 rounded'
+                        >
+                          <X className='w-4 h-4' />
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        className={`text-sm text-gray-400 ${canEdit ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                        onClick={() => canEdit && handleStartEdit(question)}
+                        title={canEdit ? '点击编辑分值' : undefined}
+                      >
+                        {question.score} 分
+                      </span>
+                    )}
+                  </div>
+                  <p className='text-gray-900 line-clamp-2'>{question.stem}</p>
+                  {question.options && (
+                    <div className='mt-2 text-sm text-gray-500'>
+                      {Object.entries(question.options).map(([key, value]) => (
+                        <div key={key} className='ml-4'>
+                          {key}. {value}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 操作按钮 */}
+                {canEdit && (
+                  <div className='flex items-center gap-1'>
+                    <button
+                      onClick={() => handleStartEdit(question)}
+                      className='p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg'
+                      title='编辑分值'
+                    >
+                      <Edit2 className='w-4 h-4' />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(question.id)}
+                      disabled={isDeleting === question.id}
+                      className='p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50'
+                      title='删除题目'
+                    >
+                      <Trash2 className='w-4 h-4' />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className='p-12 text-center text-gray-500'>
+          <FileText className='w-12 h-12 mx-auto mb-4 text-gray-300' />
+          <p>暂无题目</p>
+          {canEdit && (
+            <button
+              onClick={onAddQuestion}
+              className='mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700'
+            >
+              添加第一道题目
+            </button>
+          )}
+        </div>
+      )}
+
+      {canEdit && localQuestions.length > 0 && (
+        <div className='p-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 text-center'>
+          💡 拖动题目可调整顺序，点击分值可编辑
+        </div>
+      )}
     </div>
   );
 };

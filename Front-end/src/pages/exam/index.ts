@@ -6,3 +6,5 @@ export { ExamListPage } from './ExamListPage';
 export { CreateExamPage } from './CreateExamPage';
 export { ExamDetailPage } from './ExamDetailPage';
 export { TakeExamPage } from './TakeExamPage';
+export { ExamResultPage } from './ExamResultPage';
+export { GradeAttemptPage } from './GradeAttemptPage';

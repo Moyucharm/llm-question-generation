@@ -4,169 +4,319 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-QGen is a modern AI-driven online quiz generation and grading system built with React 19, TypeScript, and Vite. The application allows users to generate personalized quizzes through AI, take the quizzes online, and receive automated grading with detailed feedback.
+QGen 是一个基于AI的智能出题与在线考试系统前端，使用 React 19、TypeScript 和 Vite 构建。
 
-Key features include:
-- AI-powered quiz generation with multiple question types
-- Online quiz-taking with responsive design
-- Automated AI grading with detailed feedback
-- Streaming generation and grading for real-time user experience
-- Real-time logging system with virtualized rendering for performance
-- Time tracking functionality
+核心功能：
+- AI驱动的题目生成（三阶段质量控制流水线）
+- 题库管理（CRUD、导入导出）
+- 在线考试系统（创建、发布、参加、自动评分）
+- 课程与知识点管理（树形结构）
+- 流式生成与批改（SSE实时反馈）
+- 虚拟化渲染日志面板
 
 ## Technology Stack
 
-- React 19 with TypeScript
-- Vite 7 for build tooling
-- Zustand 5 for state management
-- TailwindCSS 4 for styling
-- React Window for virtualized rendering
-- Lucide React for icons
-- ESLint 9 and Prettier for code quality
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| React | 19.1 | UI框架 |
+| TypeScript | 5.8 | 类型系统 |
+| Vite | 7.0 | 构建工具 |
+| Zustand | 5.0 | 状态管理 |
+| TailwindCSS | 4.x | 样式框架 |
+| React Window | 1.8 | 虚拟化渲染 |
+| Axios | 1.13 | HTTP客户端 |
+| Lucide React | 0.532 | 图标库 |
 
 ## Project Structure
 
 ```
 src/
-├── components/
-│   ├── Layout/        # 仪表板布局组件
-│   │   ├── DashboardLayout.tsx   # 主布局
-│   │   ├── Sidebar.tsx           # 左侧导航栏
-│   │   ├── TopBar.tsx            # 顶部导航栏
-│   │   ├── UserDropdown.tsx      # 用户下拉菜单
-│   │   └── PageContainer.tsx     # 内容区容器
-│   ├── UI/            # 基础UI组件
+├── components/                      # 可复用UI组件
+│   ├── Layout/                      # 仪表板布局
+│   │   ├── DashboardLayout.tsx     # 主布局容器
+│   │   ├── Sidebar.tsx             # 左侧导航栏
+│   │   ├── TopBar.tsx              # 顶部导航栏
+│   │   ├── UserDropdown.tsx        # 用户下拉菜单
+│   │   └── PageContainer.tsx       # 内容区容器
+│   ├── UI/                          # 基础UI组件
 │   │   ├── Button.tsx
 │   │   ├── Card.tsx
 │   │   ├── Avatar.tsx
-│   │   └── Spinner.tsx
-│   ├── Course/        # 课程相关组件
+│   │   ├── Spinner.tsx
+│   │   ├── Modal.tsx
+│   │   ├── ConfirmModal.tsx
+│   │   └── InputModal.tsx
+│   ├── Course/                      # 课程相关
 │   │   ├── CourseList.tsx
 │   │   └── KnowledgePointTree.tsx
-│   ├── Question/      # 题目相关组件
-│   ├── LogPanel/      # 日志面板
-│   ├── TimeRecorder/  # 时间记录
-│   └── FloatingButton/
-├── pages/
-│   ├── auth/          # 认证页面
+│   ├── Question/                    # 题目渲染
+│   │   ├── QuestionRenderer.tsx
+│   │   ├── StreamingQuestionRenderer.tsx
+│   │   └── questions/              # 各题型组件
+│   ├── LogPanel/                    # 日志面板系统
+│   │   ├── LogPanelProvider.tsx
+│   │   ├── components/
+│   │   ├── optimized/              # 虚拟化优化版
+│   │   └── hooks/
+│   └── TimeRecorder/                # 计时功能
+│
+├── pages/                           # 页面模块
+│   ├── auth/                        # 认证页面
 │   │   ├── LoginPage.tsx
 │   │   ├── RegisterPage.tsx
 │   │   └── components/
-│   ├── generation/    # 题目生成
+│   ├── generation/                  # AI出题页
+│   │   ├── index.tsx
 │   │   └── components/
-│   │       └── CourseKnowledgeSelector.tsx  # 课程/知识点选择器
-│   ├── course/        # 课程管理
+│   │       ├── GenerationForm.tsx
+│   │       ├── CourseKnowledgeSelector.tsx
+│   │       └── PresetModal.tsx
+│   ├── course/                      # 课程管理
 │   │   └── CourseManagementPage.tsx
-│   ├── exam/          # 考试管理 🆕
-│   │   ├── ExamListPage.tsx      # 考试列表
-│   │   ├── CreateExamPage.tsx    # 创建考试
-│   │   └── ExamDetailPage.tsx    # 考试详情
-│   ├── quiz/          # 答题
-│   └── result/        # 结果
-├── stores/            # Zustand状态管理
-│   ├── useAppStore.ts
-│   ├── useAuthStore.ts
-│   ├── useCourseStore.ts  # 课程状态管理
-│   └── useExamStore.ts    # 考试状态管理 🆕
-├── services/          # API服务层
-│   ├── authService.ts
-│   ├── courseService.ts   # 课程API服务
-│   ├── examService.ts     # 考试API服务 🆕
-│   └── types.ts
-├── llm/               # LLM集成层
-├── types/             # TypeScript类型定义
-│   ├── index.ts
-│   ├── course.ts
-│   └── exam.ts            # 考试类型定义 🆕
-├── hooks/             # 自定义Hooks
-├── utils/             # 工具函数
-├── config/            # 配置
-└── router/            # 路由
+│   ├── question-bank/               # 题库管理
+│   │   ├── QuestionBankPage.tsx
+│   │   ├── QuestionEditModal.tsx
+│   │   └── QuestionImportModal.tsx
+│   ├── exam/                        # 考试系统
+│   │   ├── ExamListPage.tsx        # 考试列表
+│   │   ├── CreateExamPage.tsx      # 创建考试
+│   │   ├── ExamDetailPage.tsx      # 考试详情
+│   │   └── TakeExamPage.tsx        # 学生答题
+│   ├── quiz/                        # 答题页
+│   │   ├── index.tsx
+│   │   ├── streaming.tsx
+│   │   └── components/
+│   └── result/                      # 结果页
+│       ├── index.tsx
+│       └── components/
+│
+├── stores/                          # Zustand状态管理
+│   ├── useAppStore.ts              # 主应用状态
+│   ├── useAuthStore.ts             # 认证状态
+│   ├── useCourseStore.ts           # 课程状态
+│   ├── useExamStore.ts             # 考试状态
+│   ├── useLogStore.ts              # 日志状态
+│   ├── timeRecorderStore.ts        # 计时器状态
+│   ├── generationActions.ts        # 生成相关actions
+│   ├── answeringActions.ts         # 答题相关actions
+│   └── gradingActions.ts           # 批改相关actions
+│
+├── services/                        # API服务层
+│   ├── authService.ts              # 认证API
+│   ├── courseService.ts            # 课程API
+│   ├── examService.ts              # 考试API
+│   ├── questionBankService.ts      # 题库API
+│   └── types.ts                    # 类型定义
+│
+├── llm/                             # LLM集成层
+│   ├── api/                        # API客户端
+│   │   ├── client.ts
+│   │   ├── config.ts
+│   │   └── streamProcessor.ts
+│   ├── services/                   # 业务服务
+│   │   ├── quizGenerationService.ts
+│   │   └── quizGradingService.ts
+│   ├── prompt/                     # Prompt模板
+│   └── utils/                      # 工具函数
+│       ├── json/                   # JSON解析
+│       └── stream/                 # 流处理
+│
+├── types/                           # TypeScript类型
+│   ├── index.ts                    # 题目、答题等类型
+│   ├── course.ts                   # 课程类型
+│   └── exam.ts                     # 考试类型
+│
+├── router/
+│   └── AppRouter.tsx               # 状态驱动路由
+│
+├── hooks/                           # 自定义Hooks
+├── utils/                           # 工具函数
+└── config/                          # 配置
 ```
 
 ## Common Development Commands
 
-- `pnpm dev` - Start the development server
-- `pnpm build` - Build for production
-- `pnpm check` - Run ESLint and TypeScript type checking
-- `pnpm format` - Format code with Prettier
-- `pnpm lint:fix` - Auto-fix ESLint issues
+```bash
+pnpm dev          # 启动开发服务器 (端口5173)
+pnpm build        # 构建生产版本
+pnpm check        # 代码检查 (ESLint + TypeScript)
+pnpm format       # 格式化代码 (Prettier)
+pnpm lint:fix     # 自动修复ESLint问题
+```
 
 ## Architecture Overview
 
-### State Management
-The application uses Zustand for state management with a modular approach:
-- Main store in `src/stores/useAppStore.ts`
-- **Authentication store** in `src/stores/useAuthStore.ts` - 用户登录状态、Token管理
-- Modular actions in separate files (`generationActions.ts`, `answeringActions.ts`, `gradingActions.ts`)
-- Time tracking in `timeRecorderStore.ts`
-- Logging system in `logStore/`
+### State Management (状态管理)
 
-### Authentication System (认证系统)
-应用使用JWT进行用户认证:
-- `useAuthStore` - 管理用户状态 (user, token, isLoggedIn)
-- `authService` - 封装后端认证API调用
-- Token存储在localStorage
-- 未登录用户显示登录页面
+使用 Zustand 进行模块化状态管理：
+
+| Store | 说明 |
+|-------|------|
+| `useAppStore` | 主应用状态 (页面、题目、答案) |
+| `useAuthStore` | 认证状态 (用户、Token) |
+| `useCourseStore` | 课程与知识点 |
+| `useExamStore` | 考试状态 |
+| `useLogStore` | 日志系统 |
+
+### Authentication (认证系统)
+
+- JWT Token 认证
+- Token 存储在 localStorage
+- 未登录自动跳转登录页
+- API请求自动携带 Authorization header
+
+### Routing (路由)
+
+状态驱动路由，根据 `currentPage` 自动切换：
+
+| 页面状态 | 页面 |
+|----------|------|
+| `dashboard` | 仪表板首页 |
+| `generation` | AI出题 |
+| `courses` | 课程管理 |
+| `question-bank` | 题库管理 |
+| `exams` | 考试列表 |
+| `exam-create` | 创建考试 |
+| `exam-detail` | 考试详情 |
+| `take-exam` | 参加考试 |
+| `quiz` / `streaming-quiz` | 答题页 |
+| `result` | 结果页 |
+
+### LLM Integration (LLM集成)
+
+所有LLM调用通过后端API转发：
+
+- `/api/llm/chat` - 通用对话
+- `/api/llm/chat/stream` - 流式对话 (SSE)
+- `/api/questions/generate/stream` - 流式生成题目
+
+SSE响应格式：
+```json
+{"content": "部分内容", "done": false}
+{"content": "", "done": true}
+```
 
 ### Dashboard Layout (仪表板布局)
-应用采用现代仪表板布局设计:
-- `DashboardLayout` - 主布局容器
-- `Sidebar` - 左侧固定导航栏 (w-64, 深色主题)
-- `TopBar` - 顶部导航栏 (h-16) + 用户下拉菜单
-- `PageContainer` - 内容区容器 (浅灰背景)
 
-设计风格:
+- `DashboardLayout` - 主容器
+- `Sidebar` - 左侧导航 (w-64, 深色)
+- `TopBar` - 顶部栏 (h-16)
+- `PageContainer` - 内容区 (浅灰背景)
+
+设计风格：
 - 浅灰背景 (`bg-gray-100`) + 白色卡片
 - 蓝色主题色 (`blue-600`)
 - 圆角卡片 + 轻阴影
 
-### Routing
-The application uses a state-based routing system in `src/App.tsx` that switches pages based on `currentPage` state:
-1. Dashboard - 仪表板首页
-2. Generation - AI 出题页面
-3. Question Bank - 题库管理
-4. Exams - 考试管理 (列表/创建/详情) 🆕
-5. Quiz/Result - 答题和结果页面
+## 功能模块
 
-考试页面路由示例:
-- `exams` - 考试列表
-- `exam-create` - 创建考试
-- `exam-detail` - 考试详情 (requires `currentExamId`)
+### 题库管理 (Question Bank)
 
-### Component Organization
-Components are organized into feature-based modules:
-- Questions: `src/components/Question/`
-- Logging: `src/components/LogPanel/`
-- Time tracking: `src/components/TimeRecorder/`
-- Floating UI: `src/components/FloatingButton/`
+| 文件 | 说明 |
+|------|------|
+| `pages/question-bank/QuestionBankPage.tsx` | 题目列表，支持搜索筛选 |
+| `pages/question-bank/QuestionEditModal.tsx` | 编辑题目弹窗 |
+| `pages/question-bank/QuestionImportModal.tsx` | 导入JSON弹窗 |
+| `services/questionBankService.ts` | API封装 |
 
-### LLM Integration (通过后端API)
-The LLM integration is abstracted in the `src/llm/` directory:
-- **API clients** in `src/llm/api/` - 已改造为调用后端API而非直连LLM厂商
-- **Business services** in `src/llm/services/`
-- **Prompt templates** in `src/llm/prompt/`
+功能：
+- 题目CRUD操作
+- 按类型/课程/知识点筛选
+- JSON格式导入导出
+- AI生成题目自动保存
 
-**重要改造说明** (2026-01-04):
-- 所有LLM请求通过后端 `/api/llm/*` 端点转发
-- API密钥由后端管理，前端不再存储敏感信息
-- 使用JWT Token进行身份认证
-- SSE流式响应格式适配后端格式 `{"content": "...", "done": false/true}`
+### 考试系统 (Exam)
 
-### 后端API集成
-开发环境配置:
-- Vite开发服务器代理 `/api` 请求到 `http://localhost:8000`
-- 需要先启动后端服务器: `cd ../Back-end && uvicorn app.main:app --reload`
-- 用户需要登录后才能使用LLM功能
+| 文件 | 说明 |
+|------|------|
+| `pages/exam/ExamListPage.tsx` | 考试列表 (教师/学生视图) |
+| `pages/exam/CreateExamPage.tsx` | 创建考试表单 |
+| `pages/exam/ExamDetailPage.tsx` | 考试详情与管理 |
+| `pages/exam/TakeExamPage.tsx` | 学生答题界面 |
+| `stores/useExamStore.ts` | 考试状态 |
+| `services/examService.ts` | API封装 |
+| `types/exam.ts` | 类型定义 |
+
+考试状态流转：
+```
+draft (草稿) → published (已发布) → closed (已关闭)
+```
+
+答题状态流转：
+```
+in_progress (进行中) → submitted (已提交) → graded (已批改)
+```
+
+### 课程管理 (Course)
+
+| 文件 | 说明 |
+|------|------|
+| `pages/course/CourseManagementPage.tsx` | 课程管理页 |
+| `components/Course/CourseList.tsx` | 课程列表 |
+| `components/Course/KnowledgePointTree.tsx` | 知识点树 |
+| `stores/useCourseStore.ts` | 课程状态 |
+| `services/courseService.ts` | API封装 |
+
+知识点支持树形结构：
+- 父子层级关系
+- 拖拽排序
+- 批量操作
+
+### AI出题 (Generation)
+
+| 文件 | 说明 |
+|------|------|
+| `pages/generation/index.tsx` | 出题主页 |
+| `pages/generation/components/GenerationForm.tsx` | 出题表单 |
+| `pages/generation/components/CourseKnowledgeSelector.tsx` | 课程/知识点选择器 |
+| `pages/generation/components/PresetModal.tsx` | 预设管理 |
+| `stores/generationActions.ts` | 生成逻辑 |
+
+支持题型：
+- 单选题 (single)
+- 多选题 (multiple)
+- 填空题 (blank)
+- 简答题 (short)
 
 ## Development Guidelines
 
 ### Code Quality
-- TypeScript is used throughout with strict type checking
-- ESLint and Prettier are configured for consistent code style
-- Husky is used for git hooks to enforce code quality
 
-### Performance Considerations
-- Virtualized rendering with React Window for large data sets
-- React.memo, useMemo, and useCallback for optimization
-- Streaming data handling for real-time user experience
+- TypeScript 严格模式
+- ESLint + Prettier 代码规范
+- Husky git hooks
+
+### Performance
+
+- React Window 虚拟化长列表
+- React.memo / useMemo / useCallback 优化
+- 流式渲染减少等待
+- 代码分割按需加载
+
+### 后端集成
+
+开发环境：
+- Vite 代理 `/api` 到 `http://localhost:8000`
+- 需先启动后端服务
+
+```bash
+# 终端1: 启动后端
+cd ../Back-end && venv\Scripts\activate && uvicorn app.main:app --reload
+
+# 终端2: 启动前端
+pnpm dev
+```
+
+### API密钥安全
+
+- **禁止** 在前端代码中存储API密钥
+- 所有LLM调用通过后端转发
+- 使用JWT Token认证
+
+## 快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `J` / `K` | 上下切换题目 |
+| `Shift + ?` | 显示快捷键帮助 |
+| `Ctrl + L` | 切换日志面板 |

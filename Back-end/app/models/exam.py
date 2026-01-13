@@ -29,7 +29,8 @@ class AttemptStatus(str, enum.Enum):
     """Attempt status enumeration"""
     IN_PROGRESS = "in_progress"  # Currently taking the exam
     SUBMITTED = "submitted"      # Submitted, waiting for grading
-    GRADED = "graded"            # Graded
+    AI_GRADED = "ai_graded"      # AI graded, waiting for teacher review
+    GRADED = "graded"            # Final graded by teacher
 
 
 class Exam(Base, TimestampMixin):
@@ -98,8 +99,12 @@ class Attempt(Base, TimestampMixin):
         student_id: Foreign key to student
         started_at: When the attempt started
         submitted_at: When the attempt was submitted
-        total_score: Total score achieved
+        total_score: Total score achieved (auto-calculated)
+        final_score: Final score confirmed by teacher
         status: Attempt status
+        is_graded_by_teacher: Whether teacher has reviewed
+        graded_at: When teacher graded
+        graded_by: Teacher who graded
     """
 
     __tablename__ = "attempts"
@@ -118,6 +123,15 @@ class Attempt(Base, TimestampMixin):
     started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     total_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # New fields for grade management
+    final_score: Mapped[Optional[float]] = mapped_column(nullable=True)  # Teacher confirmed score
+    is_graded_by_teacher: Mapped[bool] = mapped_column(default=False, nullable=False)
+    graded_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    graded_by: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     status: Mapped[AttemptStatus] = mapped_column(
         Enum(AttemptStatus),
         default=AttemptStatus.IN_PROGRESS,
@@ -127,7 +141,8 @@ class Attempt(Base, TimestampMixin):
 
     # Relationships
     exam: Mapped["Exam"] = relationship("Exam", back_populates="attempts")
-    student: Mapped["User"] = relationship("User", back_populates="attempts")
+    student: Mapped["User"] = relationship("User", foreign_keys=[student_id], back_populates="attempts")
+    grader: Mapped[Optional["User"]] = relationship("User", foreign_keys=[graded_by])
     answers: Mapped[List["AttemptAnswer"]] = relationship(
         "AttemptAnswer",
         back_populates="attempt",
@@ -150,8 +165,12 @@ class AttemptAnswer(Base, TimestampMixin):
         question_id: Foreign key to question
         student_answer: JSON - student's answer
         is_correct: Whether the answer is correct (for objective questions)
-        score: Score achieved
-        feedback: AI grading feedback
+        score: Final score (teacher_score if set, else ai_score)
+        ai_score: AI grading score
+        teacher_score: Teacher grading score (overrides AI)
+        feedback: Legacy feedback field
+        ai_feedback: AI grading feedback
+        teacher_feedback: Teacher grading feedback
         time_spent_seconds: Time spent on this question
     """
 
@@ -170,7 +189,14 @@ class AttemptAnswer(Base, TimestampMixin):
     )
     student_answer: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     is_correct: Mapped[Optional[bool]] = mapped_column(nullable=True)
-    score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Final score
+    # AI grading fields
+    ai_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+    ai_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Teacher grading fields
+    teacher_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+    teacher_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Legacy field (kept for compatibility)
     feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     time_spent_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 

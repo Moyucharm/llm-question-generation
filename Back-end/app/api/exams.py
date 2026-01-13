@@ -18,7 +18,8 @@ from app.services.exam_service import ExamService
 from app.schemas.exam import (
     ExamCreate, ExamUpdate, ExamResponse, ExamDetail, ExamListResponse,
     AttemptResponse, AttemptListResponse, AnswerSubmit,
-    StudentExamView
+    StudentExamView, AttemptDetailResponse, UpdateAttemptScoresRequest,
+    ConfirmGradeRequest, GradeStatistics
 )
 
 router = APIRouter(prefix="/exams", tags=["exams"])
@@ -572,4 +573,183 @@ async def get_exam_questions(
             q.pop("explanation", None)
 
     return {"questions": questions, "total": len(questions)}
+
+
+@router.put("/{exam_id}/questions/reorder")
+async def reorder_questions(
+    exam_id: int,
+    data: dict,
+    current_user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+):
+    """重新排序考试中的题目（教师）"""
+    orders = data.get("orders")
+    if not orders or not isinstance(orders, list):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="orders必须是数组"
+        )
+
+    service = ExamService(db)
+    success = await service.reorder_questions(
+        exam_id, orders, current_user.id
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无法重新排序，考试不存在、无权限或已发布"
+        )
+
+    return {"message": "排序已更新"}
+
+
+@router.put("/{exam_id}/questions/{question_id}")
+async def update_question_score(
+    exam_id: int,
+    question_id: int,
+    data: dict,
+    current_user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新考试中题目的分值（教师）"""
+    score = data.get("score")
+    if score is None or not isinstance(score, int) or score < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="分值必须是非负整数"
+        )
+
+    service = ExamService(db)
+    success = await service.update_question_score(
+        exam_id, question_id, score, current_user.id
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无法更新分值，考试不存在、无权限或已发布"
+        )
+
+    return {"message": "分值已更新", "score": score}
+
+
+# ===================================
+# Grade Management (Teacher)
+# ===================================
+
+@router.get("/{exam_id}/attempts/{attempt_id}", response_model=AttemptDetailResponse)
+async def get_attempt_detail(
+    exam_id: int,
+    attempt_id: int,
+    current_user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取答卷详情（教师批改用）"""
+    service = ExamService(db)
+    detail = await service.get_attempt_detail(exam_id, attempt_id, current_user.id)
+
+    if not detail:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="答卷不存在或无权限查看"
+        )
+
+    return detail
+
+
+@router.put("/{exam_id}/attempts/{attempt_id}")
+async def update_attempt_scores(
+    exam_id: int,
+    attempt_id: int,
+    data: UpdateAttemptScoresRequest,
+    current_user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新答题评分（教师）"""
+    service = ExamService(db)
+    attempt = await service.update_attempt_scores(
+        exam_id, attempt_id,
+        [s.model_dump() for s in data.scores],
+        current_user.id
+    )
+
+    if not attempt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无法更新评分"
+        )
+
+    return {"message": "评分已更新", "total_score": attempt.total_score}
+
+
+@router.post("/{exam_id}/attempts/{attempt_id}/confirm")
+async def confirm_grade(
+    exam_id: int,
+    attempt_id: int,
+    data: ConfirmGradeRequest,
+    current_user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+):
+    """确认最终成绩（教师）"""
+    service = ExamService(db)
+    attempt = await service.confirm_grade(
+        exam_id, attempt_id, current_user.id,
+        final_score=data.final_score,
+        comment=data.comment
+    )
+
+    if not attempt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无法确认成绩"
+        )
+
+    return {
+        "message": "成绩已确认",
+        "final_score": attempt.final_score,
+        "graded_at": attempt.graded_at
+    }
+
+
+@router.get("/{exam_id}/statistics", response_model=GradeStatistics)
+async def get_grade_statistics(
+    exam_id: int,
+    current_user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取考试成绩统计（教师）"""
+    service = ExamService(db)
+    stats = await service.get_grade_statistics(exam_id, current_user.id)
+
+    if not stats:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="考试不存在或无权限查看"
+        )
+
+    return stats
+
+
+# ===================================
+# Student Result
+# ===================================
+
+@router.get("/{exam_id}/result")
+async def get_exam_result(
+    exam_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取考试结果（学生）"""
+    service = ExamService(db)
+    result = await service.get_student_result(exam_id, current_user.id)
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="未找到考试记录"
+        )
+
+    return result
 

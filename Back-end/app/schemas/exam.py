@@ -22,6 +22,7 @@ class AttemptStatus(str, Enum):
     """Attempt status enumeration"""
     IN_PROGRESS = "in_progress"
     SUBMITTED = "submitted"
+    AI_GRADED = "ai_graded"
     GRADED = "graded"
 
 
@@ -110,7 +111,11 @@ class AnswerResponse(BaseModel):
     student_answer: Optional[Any] = None
     is_correct: Optional[bool] = None
     score: Optional[int] = None
+    ai_score: Optional[float] = None
+    teacher_score: Optional[float] = None
     feedback: Optional[str] = None
+    ai_feedback: Optional[str] = None
+    teacher_feedback: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -125,6 +130,11 @@ class AttemptResponse(BaseModel):
     started_at: datetime
     submitted_at: Optional[datetime] = None
     total_score: Optional[int] = None
+    final_score: Optional[float] = None
+    is_graded_by_teacher: bool = False
+    graded_at: Optional[datetime] = None
+    graded_by: Optional[int] = None
+    grader_name: Optional[str] = None
     status: AttemptStatus
     answers: List[AnswerResponse] = []
     remaining_seconds: Optional[int] = None  # 剩余时间
@@ -203,4 +213,88 @@ class QuestionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ===================================
+# Grade Management Schemas
+# ===================================
+
+class AnswerDetailResponse(BaseModel):
+    """Answer detail with question info for grading"""
+    id: int
+    question_id: int
+    question_type: str
+    question_stem: str
+    question_options: Optional[dict] = None
+    correct_answer: Optional[Any] = None
+    explanation: Optional[str] = None
+    max_score: int = 10
+    # Student answer
+    student_answer: Optional[Any] = None
+    is_correct: Optional[bool] = None
+    # Scores
+    score: Optional[int] = None
+    ai_score: Optional[float] = None
+    teacher_score: Optional[float] = None
+    # Feedback
+    feedback: Optional[str] = None
+    ai_feedback: Optional[str] = None
+    teacher_feedback: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AttemptDetailResponse(BaseModel):
+    """Attempt detail with full question info for teacher grading"""
+    id: int
+    exam_id: int
+    exam_title: str
+    student_id: int
+    student_name: str
+    student_email: Optional[str] = None
+    started_at: datetime
+    submitted_at: Optional[datetime] = None
+    total_score: Optional[int] = None
+    final_score: Optional[float] = None
+    max_score: int = 0
+    is_graded_by_teacher: bool = False
+    graded_at: Optional[datetime] = None
+    graded_by: Optional[int] = None
+    grader_name: Optional[str] = None
+    status: AttemptStatus
+    answers: List[AnswerDetailResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class UpdateAnswerScoreRequest(BaseModel):
+    """Update single answer score"""
+    question_id: int = Field(..., description="题目ID")
+    teacher_score: float = Field(..., ge=0, description="教师评分")
+    teacher_feedback: Optional[str] = Field(None, description="教师评语")
+
+
+class UpdateAttemptScoresRequest(BaseModel):
+    """Update multiple answer scores"""
+    scores: List[UpdateAnswerScoreRequest] = Field(..., description="评分列表")
+
+
+class ConfirmGradeRequest(BaseModel):
+    """Confirm final grade"""
+    final_score: Optional[float] = Field(None, ge=0, description="最终成绩（可选，不提供则自动计算）")
+    comment: Optional[str] = Field(None, description="教师评语（可选）")
+
+
+class GradeStatistics(BaseModel):
+    """Grade statistics for an exam"""
+    exam_id: int
+    total_attempts: int
+    submitted_count: int
+    graded_count: int
+    average_score: Optional[float] = None
+    highest_score: Optional[float] = None
+    lowest_score: Optional[float] = None
+    pass_rate: Optional[float] = None  # 及格率
 

@@ -11,6 +11,11 @@ import type {
   Attempt,
   AttemptListResponse,
   SubmitAnswerRequest,
+  AttemptDetail,
+  UpdateAttemptScoresRequest,
+  ConfirmGradeRequest,
+  GradeStatistics,
+  StudentExamResult,
 } from '@/types/exam';
 
 const API_BASE =
@@ -251,6 +256,40 @@ export async function removeQuestionFromExam(
 }
 
 /**
+ * 更新考试中题目的分值
+ */
+export async function updateQuestionScore(
+  examId: number,
+  questionId: number,
+  score: number
+): Promise<{ message: string; score: number }> {
+  const response = await fetch(
+    `${API_BASE}/exams/${examId}/questions/${questionId}`,
+    {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ score }),
+    }
+  );
+  return handleResponse(response);
+}
+
+/**
+ * 重新排序考试中的题目
+ */
+export async function reorderExamQuestions(
+  examId: number,
+  orders: { question_id: number; order: number }[]
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE}/exams/${examId}/questions/reorder`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify({ orders }),
+  });
+  return handleResponse(response);
+}
+
+/**
  * 获取考试题目列表
  */
 export async function getExamQuestions(
@@ -260,4 +299,88 @@ export async function getExamQuestions(
     headers: getHeaders(),
   });
   return handleResponse(response);
+}
+
+// ===================================
+// 成绩管理 (教师)
+// ===================================
+
+/**
+ * 获取答卷详情（教师批改用）
+ */
+export async function getAttemptDetail(
+  examId: number,
+  attemptId: number
+): Promise<AttemptDetail> {
+  const response = await fetch(
+    `${API_BASE}/exams/${examId}/attempts/${attemptId}`,
+    { headers: getHeaders() }
+  );
+  return handleResponse<AttemptDetail>(response);
+}
+
+/**
+ * 更新答题评分
+ */
+export async function updateAttemptScores(
+  examId: number,
+  attemptId: number,
+  data: UpdateAttemptScoresRequest
+): Promise<{ message: string; total_score: number }> {
+  const response = await fetch(
+    `${API_BASE}/exams/${examId}/attempts/${attemptId}`,
+    {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    }
+  );
+  return handleResponse(response);
+}
+
+/**
+ * 确认最终成绩
+ */
+export async function confirmGrade(
+  examId: number,
+  attemptId: number,
+  data: ConfirmGradeRequest
+): Promise<{ message: string; final_score: number; graded_at: string }> {
+  const response = await fetch(
+    `${API_BASE}/exams/${examId}/attempts/${attemptId}/confirm`,
+    {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    }
+  );
+  return handleResponse(response);
+}
+
+/**
+ * 获取考试成绩统计
+ */
+export async function getGradeStatistics(
+  examId: number
+): Promise<GradeStatistics> {
+  const response = await fetch(`${API_BASE}/exams/${examId}/statistics`, {
+    headers: getHeaders(),
+  });
+  return handleResponse<GradeStatistics>(response);
+}
+
+// ===================================
+// 学生成绩查看
+// ===================================
+
+/**
+ * 获取考试结果（学生）
+ */
+export async function getExamResult(
+  examId: number
+): Promise<StudentExamResult> {
+  const response = await fetch(`${API_BASE}/exams/${examId}/result`, {
+    headers: getHeaders(),
+  });
+  return handleResponse<StudentExamResult>(response);
 }

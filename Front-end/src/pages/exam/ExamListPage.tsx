@@ -15,6 +15,7 @@ import {
   Trash2,
   CheckCircle,
   AlertCircle,
+  Eye,
 } from 'lucide-react';
 import { useExamStore } from '@/stores/useExamStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -199,6 +200,7 @@ export const ExamListPage: React.FC<ExamListPageProps> = ({ onNavigate }) => {
                     onNavigate?.('exam-take', exam.id);
                   }
                 }}
+                onViewResult={() => onNavigate?.('exam-result', exam.id)}
                 onPublish={() => handlePublish(exam.id)}
                 onClose={() => handleClose(exam.id)}
                 onDelete={() => handleDelete(exam.id)}
@@ -218,6 +220,7 @@ interface ExamCardProps {
   exam: Exam;
   isTeacher: boolean;
   onView: () => void;
+  onViewResult: () => void;
   onPublish: () => void;
   onClose: () => void;
   onDelete: () => void;
@@ -229,6 +232,7 @@ const ExamCard: React.FC<ExamCardProps> = ({
   exam,
   isTeacher,
   onView,
+  onViewResult,
   onPublish,
   onClose,
   onDelete,
@@ -336,11 +340,24 @@ const ExamCard: React.FC<ExamCardProps> = ({
             <>
               {exam.status === 'published' &&
                 (exam.attempt_status === 'graded' ||
+                exam.attempt_status === 'ai_graded' ||
                 exam.attempt_status === 'submitted' ? (
-                  <span className='text-sm text-green-600 font-medium flex items-center gap-1'>
-                    <CheckCircle className='w-4 h-4' />
-                    已完成
-                  </span>
+                  <div className='flex items-center gap-2'>
+                    <span className='text-sm text-green-600 font-medium flex items-center gap-1'>
+                      <CheckCircle className='w-4 h-4' />
+                      已完成
+                    </span>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        onViewResult();
+                      }}
+                      className='flex items-center gap-1 px-3 py-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-sm'
+                    >
+                      <Eye className='w-4 h-4' />
+                      查看成绩
+                    </button>
+                  </div>
                 ) : availability.canStart ? (
                   <button
                     onClick={e => {

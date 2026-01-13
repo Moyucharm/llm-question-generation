@@ -16,6 +16,8 @@ import {
   CreateExamPage,
   ExamDetailPage,
   TakeExamPage,
+  ExamResultPage,
+  GradeAttemptPage,
 } from '@/pages/exam';
 import { QuestionBankPage } from '@/pages/question-bank';
 
@@ -38,6 +40,7 @@ function App() {
   const [authPage, setAuthPage] = useState<'login' | 'register'>('login');
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [currentExamId, setCurrentExamId] = useState<number | null>(null);
+  const [currentAttemptId, setCurrentAttemptId] = useState<number | null>(null);
 
   // 初始化认证状态
   useEffect(() => {
@@ -119,7 +122,7 @@ function App() {
     }
   };
 
-  const getPathForPage = (page: string, examId: number | null) => {
+  const getPathForPage = (page: string, examId: number | null, attemptId?: number | null) => {
     switch (page) {
       case 'dashboard':
         return '/dashboard';
@@ -137,6 +140,10 @@ function App() {
         return examId ? `/exams/${examId}` : '/exams';
       case 'exam-take':
         return examId ? `/exams/${examId}/take` : '/exams';
+      case 'exam-result':
+        return examId ? `/exams/${examId}/result` : '/exams';
+      case 'exam-grade':
+        return examId && attemptId ? `/exams/${examId}/attempts/${attemptId}/grade` : '/exams';
       default:
         return '/dashboard';
     }
@@ -192,11 +199,13 @@ function App() {
         if (!second) {
           setCurrentPage('exams');
           setCurrentExamId(null);
+          setCurrentAttemptId(null);
           return;
         }
         if (second === 'create') {
           setCurrentPage('exam-create');
           setCurrentExamId(null);
+          setCurrentAttemptId(null);
           return;
         }
 
@@ -204,13 +213,32 @@ function App() {
         if (!Number.isFinite(examId)) {
           setCurrentPage('exams');
           setCurrentExamId(null);
+          setCurrentAttemptId(null);
           return;
         }
         setCurrentExamId(examId);
+
         if (third === 'take') {
           setCurrentPage('exam-take');
+          setCurrentAttemptId(null);
+        } else if (third === 'result') {
+          setCurrentPage('exam-result');
+          setCurrentAttemptId(null);
+        } else if (third === 'attempts') {
+          // /exams/:examId/attempts/:attemptId/grade
+          const fourth = parts[3];
+          const fifth = parts[4];
+          const attemptId = Number(fourth);
+          if (Number.isFinite(attemptId) && fifth === 'grade') {
+            setCurrentAttemptId(attemptId);
+            setCurrentPage('exam-grade');
+          } else {
+            setCurrentPage('exam-detail');
+            setCurrentAttemptId(null);
+          }
         } else {
           setCurrentPage('exam-detail');
+          setCurrentAttemptId(null);
         }
         return;
       }
@@ -251,8 +279,9 @@ function App() {
   }, [isInitialized, user]);
 
   // 处理页面切换
-  const handlePageChange = (page: string, examId?: number) => {
+  const handlePageChange = (page: string, examId?: number, attemptId?: number) => {
     let nextExamId = currentExamId;
+    let nextAttemptId = currentAttemptId;
 
     setCurrentPage(page);
     if (typeof examId === 'number') {
@@ -262,7 +291,14 @@ function App() {
     }
     setCurrentExamId(nextExamId);
 
-    setPathname(getPathForPage(page, nextExamId));
+    if (typeof attemptId === 'number') {
+      nextAttemptId = attemptId;
+    } else if (page !== 'exam-grade') {
+      nextAttemptId = null;
+    }
+    setCurrentAttemptId(nextAttemptId);
+
+    setPathname(getPathForPage(page, nextExamId, nextAttemptId));
   };
 
   // 初始化加载中状态（仅用于启动时的 token 校验等）
@@ -337,6 +373,14 @@ function App() {
           />
         ) : currentPage === 'exam-take' && currentExamId ? (
           <TakeExamPage examId={currentExamId} onNavigate={handlePageChange} />
+        ) : currentPage === 'exam-result' && currentExamId ? (
+          <ExamResultPage examId={currentExamId} onNavigate={handlePageChange} />
+        ) : currentPage === 'exam-grade' && currentExamId && currentAttemptId ? (
+          <GradeAttemptPage
+            examId={currentExamId}
+            attemptId={currentAttemptId}
+            onNavigate={handlePageChange}
+          />
         ) : (
           // AI出题页面 - 使用现有的状态路由
           <>
