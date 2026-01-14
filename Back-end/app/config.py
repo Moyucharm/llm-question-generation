@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     # ===================================
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = "logs/app.log"
+    SQL_ECHO: bool = False  # 是否输出 SQL 查询日志（开发时可开启调试）
 
     # Pydantic配置
     model_config = SettingsConfigDict(

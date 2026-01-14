@@ -18,19 +18,16 @@ from app.api import auth_router, llm_router, questions_router, courses_router, e
 async def lifespan(app: FastAPI):
     """Application lifecycle management"""
     # Startup
-    print(f"[START] {settings.APP_NAME} v{settings.APP_VERSION} starting...")
-    print(f"[ENV] Environment: {settings.ENVIRONMENT}")
-    print(f"[DEBUG] Debug mode: {settings.DEBUG}")
+    print(f"[启动] {settings.APP_NAME} v{settings.APP_VERSION}")
+    print(f"[启动] 环境: {settings.ENVIRONMENT} | 调试: {settings.DEBUG}")
 
     # Initialize database
-    print("[DB] Initializing database...")
     await init_db()
-    print("[DB] Database initialized successfully")
 
     yield
 
     # Shutdown
-    print(f"[STOP] {settings.APP_NAME} shutting down...")
+    print(f"[关闭] {settings.APP_NAME} 已停止")
 
 
 # 创建FastAPI应用实例

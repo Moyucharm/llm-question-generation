@@ -18,7 +18,7 @@ from app.config import settings
 # For SQLite, we need to enable WAL mode for better concurrency
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=settings.DEBUG,  # Log SQL queries in debug mode
+    echo=settings.SQL_ECHO,  # 单独控制 SQL 日志输出
     future=True,
     # SQLite specific settings
     connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {},

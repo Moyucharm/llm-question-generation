@@ -139,10 +139,10 @@ class GenerationPipeline:
         # Stage 1: Generate questions
         try:
             raw_questions = await self.generator.generate(request, user_id)
-            print(f"[Pipeline] Generated {len(raw_questions)} raw questions")
+            print(f"[出题] 生成 {len(raw_questions)} 道题目")
         except Exception as e:
             # Generation failed completely
-            print(f"[Pipeline] Generation failed: {type(e).__name__}: {e}")
+            print(f"[出题] ✗ 生成失败: {type(e).__name__}: {e}")
             import traceback
             traceback.print_exc()
             return result

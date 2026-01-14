@@ -23,7 +23,7 @@ async def init_db() -> None:
         # Create all tables
         await conn.run_sync(Base.metadata.create_all)
 
-        print("[DB] Database tables created successfully")
+        print("[启动] 数据库初始化完成")
 
 
 async def create_initial_data(db: AsyncSession) -> None:
