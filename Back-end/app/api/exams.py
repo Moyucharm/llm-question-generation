@@ -7,7 +7,7 @@ Endpoints for exam management
 from typing import Optional
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
@@ -427,9 +427,11 @@ async def submit_exam(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """提交考试（学生）"""
+    """提交考试（学生）- 立即返回，后台批改"""
     service = ExamService(db)
-    attempt = await service.submit_attempt(exam_id, current_user.id)
+
+    # 立即提交，不等待批改
+    attempt = await service.submit_attempt_immediate(exam_id, current_user.id)
 
     if not attempt:
         raise HTTPException(
@@ -437,20 +439,11 @@ async def submit_exam(
             detail="无法提交考试"
         )
 
-    # 重新获取带答案的记录
-    attempt = await service.get_attempt(exam_id, current_user.id)
+    # 直接启动线程执行批改（不使用BackgroundTasks）
+    print(f"[提交] 考试ID={exam_id} 学生ID={current_user.id} → 启动后台批改")
+    _background_grade_attempt(exam_id, current_user.id)
 
-    answers = [
-        {
-            "question_id": a.question_id,
-            "student_answer": a.student_answer,
-            "is_correct": a.is_correct,
-            "score": a.score,
-            "feedback": a.feedback,
-        }
-        for a in attempt.answers
-    ]
-
+    # 立即返回 SUBMITTED 状态
     return AttemptResponse(
         id=attempt.id,
         exam_id=attempt.exam_id,
@@ -458,11 +451,12 @@ async def submit_exam(
         student_name=current_user.name,
         started_at=attempt.started_at,
         submitted_at=attempt.submitted_at,
-        total_score=attempt.total_score,
+        total_score=None,  # 批改中，暂无分数
         status=AttemptStatus(attempt.status.value),
-        answers=answers,
+        answers=[],  # 立即返回时不包含答案详情
         remaining_seconds=0,
     )
+
 
 
 # ===================================
@@ -753,3 +747,44 @@ async def get_exam_result(
 
     return result
 
+
+
+# ===================================
+# Background Tasks
+# ===================================
+
+def _background_grade_attempt(exam_id: int, student_id: int):
+    """后台批改任务(使用线程运行)"""
+    import threading
+    import asyncio
+
+    def run_in_thread():
+        """在新线程中运行异步批改"""
+        async def _do_grade():
+            from app.db import async_session_maker
+
+            async with async_session_maker() as db:
+                service = ExamService(db)
+                try:
+                    print(f"[批改] 开始批改 考试ID={exam_id} 学生ID={student_id}")
+                    result = await service.grade_submitted_attempt(exam_id, student_id)
+                    if result:
+                        print(f"[批改] ✓ 完成! 状态={result.status.value} 总分={result.total_score}")
+                    else:
+                        print(f"[批改] ✗ 失败: 未找到答题记录")
+                    return result
+                except Exception as e:
+                    print(f"[批改] ✗ 错误: {e}")
+                    return None
+
+        # Create new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(_do_grade())
+        finally:
+            loop.close()
+
+    # Start thread
+    thread = threading.Thread(target=run_in_thread, daemon=True)
+    thread.start()

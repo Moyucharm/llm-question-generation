@@ -45,7 +45,7 @@ interface ExamActions {
 
   // 学生答题
   startExam: (examId: number) => Promise<void>;
-  fetchAttempt: (examId: number) => Promise<void>;
+  fetchAttempt: (examId: number) => Promise<Attempt | null>;
   saveAnswer: (examId: number, data: SubmitAnswerRequest) => Promise<void>;
   submitExam: (examId: number) => Promise<void>;
 
@@ -201,9 +201,11 @@ export const useExamStore = create<ExamStore>(set => ({
     try {
       const attempt = await examService.getAttempt(examId);
       set({ currentAttempt: attempt });
+      return attempt; // 返回attempt供调用者使用
     } catch {
       // 404 表示没有答题记录，不是错误
       set({ currentAttempt: null });
+      return null;
     }
   },
 

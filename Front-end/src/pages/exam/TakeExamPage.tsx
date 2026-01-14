@@ -20,6 +20,7 @@ import {
   Send,
   X,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { useExamStore } from '@/stores/useExamStore';
 
@@ -46,6 +47,7 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
     saveAnswer,
     submitExam,
     clearError,
+    fetchAttempt,
   } = useExamStore();
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -57,6 +59,61 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [timeInitialized, setTimeInitialized] = useState(false);
+  const [timeExpired, setTimeExpired] = useState(false);
+  const [showSubmitSuccess, setShowSubmitSuccess] = useState(false);
+  const [gradingStatus, setGradingStatus] = useState<string>('批改中...');
+
+  // 轮询检查批改状态
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasJumped = useRef(false); // 防止重复跳转
+  useEffect(() => {
+    if (!showSubmitSuccess) {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    // 开始轮询
+    const checkGradingStatus = async () => {
+      if (hasJumped.current) return; // 已经跳转过了，不再检查
+      
+      try {
+        const attempt = await fetchAttempt(examId); // 使用返回值
+        const status = attempt?.status;
+        console.log('[Polling] Attempt status:', status);
+        
+        if (status === 'ai_graded' || status === 'graded') {
+          hasJumped.current = true;
+          setGradingStatus('批改完成！');
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+          // 自动跳转到结果页
+          setTimeout(() => {
+            onNavigate?.('exam-result', examId);
+          }, 1000);
+        }
+      } catch (e) {
+        console.error('轮询批改状态失败:', e);
+      }
+    };
+
+    // 立即检查一次
+    checkGradingStatus();
+
+    // 每3秒轮询一次
+    pollingRef.current = setInterval(checkGradingStatus, 3000);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [showSubmitSuccess, examId, fetchAttempt, onNavigate]);
 
   // 用于追踪输入框焦点状态
   const isInputFocused = useRef(false);
@@ -103,6 +160,8 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
       setRemainingTime(prev => {
         if (prev === null || prev <= 1) {
           if (timerRef.current) clearInterval(timerRef.current);
+          // 时间到期，设置标志
+          setTimeExpired(true);
           return 0;
         }
         return prev - 1;
@@ -159,6 +218,9 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleAnswerChange = useCallback(
     (questionId: number, answer: string | string[]) => {
+      // 时间到期后禁止修改答案
+      if (timeExpired || isSubmitting) return;
+
       setAnswers(prev => ({ ...prev, [questionId]: answer }));
 
       if (saveTimeoutRef.current) {
@@ -172,43 +234,45 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
         }
       }, 500);
     },
-    [examId, saveAnswer]
+    [examId, saveAnswer, timeExpired, isSubmitting]
   );
 
   // 点击提交按钮
   const handleSubmit = useCallback(() => {
-    if (isSubmitting) return;
+    if (isSubmitting || timeExpired) return;
     setShowConfirmModal(true);
-  }, [isSubmitting]);
+  }, [isSubmitting, timeExpired]);
 
   // 实际执行提交
-  const doSubmit = useCallback(async () => {
+  const doSubmit = useCallback(async (isAutoSubmit: boolean = false) => {
     setShowConfirmModal(false);
     setIsSubmitting(true);
+    setSubmitMessage(null);
+
     try {
       await submitExam(examId);
-      setSubmitMessage('考试已提交！正在跳转到成绩页面...');
-      setTimeout(() => {
-        onNavigate?.('exam-result', examId);
-      }, 1500);
-    } catch {
+      // 提交成功，显示友好的反馈界面
+      setShowSubmitSuccess(true);
+    } catch (err) {
       setSubmitMessage('提交失败，请重试');
       setIsSubmitting(false);
+      setTimeExpired(false); // 失败后允许重新提交
     }
-  }, [examId, onNavigate, submitExam]);
+  }, [examId, submitExam]);
 
   // 自动提交（时间到）
   useEffect(() => {
-    if (remainingTime === 0 && !isSubmitting) {
-      void doSubmit();
+    if (timeExpired && !isSubmitting && !showSubmitSuccess) {
+      // 时间到期自动提交
+      void doSubmit(true);
     }
-  }, [doSubmit, remainingTime, isSubmitting]);
+  }, [timeExpired, isSubmitting, showSubmitSuccess, doSubmit]);
 
   // 键盘快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isInputFocused.current) return;
-      if (showConfirmModal || submitMessage) return;
+      if (showConfirmModal || submitMessage || timeExpired || isSubmitting) return;
 
       switch (e.key) {
         case 'ArrowLeft':
@@ -240,7 +304,7 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [questions.length, showConfirmModal, submitMessage, handleSubmit]);
+  }, [questions.length, showConfirmModal, submitMessage, handleSubmit, timeExpired, isSubmitting]);
 
   if (isLoadingExam || isInitializing) {
     return (
@@ -322,6 +386,9 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
     );
   }
 
+  // 时间到期或正在提交时，禁用所有交互
+  const isDisabled = timeExpired || isSubmitting;
+
   return (
     <div className='max-w-4xl mx-auto'>
       <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4'>
@@ -329,7 +396,8 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
           <div className='flex items-center gap-4'>
             <button
               onClick={() => onNavigate?.('exams')}
-              className='p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg'
+              disabled={isDisabled}
+              className='p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed'
             >
               <ArrowLeft className='w-5 h-5' />
             </button>
@@ -339,23 +407,27 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
               </h1>
               <p className='text-sm text-gray-500'>
                 {answeredCount}/{questions.length} 题已作答
-                <span className='ml-2 text-xs text-gray-400'>
-                  (← → 切换题目)
-                </span>
+                {!isDisabled && (
+                  <span className='ml-2 text-xs text-gray-400'>
+                    (← → 切换题目)
+                  </span>
+                )}
               </p>
             </div>
           </div>
           {remainingTime !== null && (
             <div
               className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                remainingTime < 300
+                remainingTime === 0
+                  ? 'bg-red-200 text-red-800 font-bold'
+                  : remainingTime < 300
                   ? 'bg-red-100 text-red-600'
                   : 'bg-blue-100 text-blue-600'
               }`}
             >
               <Clock className='w-5 h-5' />
               <span className='font-mono text-lg font-semibold'>
-                {formatTime(remainingTime)}
+                {remainingTime === 0 ? '时间到' : formatTime(remainingTime)}
               </span>
             </div>
           )}
@@ -391,6 +463,7 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
           onFocusChange={focused => {
             isInputFocused.current = focused;
           }}
+          disabled={isDisabled}
         />
       </div>
 
@@ -398,7 +471,7 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
         <div className='flex items-center justify-between'>
           <button
             onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
-            disabled={currentIndex === 0}
+            disabled={currentIndex === 0 || isDisabled}
             className='flex items-center gap-1 px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
           >
             <ChevronLeft className='w-4 h-4' />
@@ -410,13 +483,14 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
               <button
                 key={q.id}
                 onClick={() => setCurrentIndex(i)}
+                disabled={isDisabled}
                 className={`w-8 h-8 text-sm rounded ${
                   i === currentIndex
                     ? 'bg-blue-600 text-white'
                     : answers[q.id]
                       ? 'bg-green-100 text-green-600'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {i + 1}
               </button>
@@ -428,7 +502,8 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
               onClick={() =>
                 setCurrentIndex(i => Math.min(questions.length - 1, i + 1))
               }
-              className='flex items-center gap-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700'
+              disabled={isDisabled}
+              className='flex items-center gap-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
             >
               下一题
               <ChevronRight className='w-4 h-4' />
@@ -441,16 +516,36 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
         <div className='mt-4 flex justify-center'>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting}
-            className='flex items-center gap-2 px-6 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50'
+            disabled={isDisabled}
+            className='flex items-center gap-2 px-6 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed'
           >
             <Send className='w-4 h-4' />
-            {isSubmitting ? '提交中...' : '提交考试'}
+            {isSubmitting ? '提交中...' : timeExpired ? '时间已到' : '提交考试'}
           </button>
         </div>
       </div>
 
-      {showConfirmModal && (
+      {/* 时间到期自动提交提示 */}
+      {timeExpired && isSubmitting && !showSubmitSuccess && (
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50'>
+          <div className='bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 text-center'>
+            <Clock className='w-16 h-16 text-orange-500 mx-auto mb-4' />
+            <h3 className='text-xl font-semibold text-gray-900 mb-2'>
+              考试时间已到
+            </h3>
+            <p className='text-gray-600 mb-4'>
+              正在自动提交您的答案，请稍候...
+            </p>
+            <div className='flex items-center justify-center gap-2'>
+              <Loader2 className='w-5 h-5 animate-spin text-blue-600' />
+              <span className='text-sm text-gray-500'>AI批改中...</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 确认提交模态框 */}
+      {showConfirmModal && !timeExpired && (
         <div className='fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50'>
           <div className='bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4'>
             <div className='flex items-center gap-3 mb-4'>
@@ -473,7 +568,7 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
                 取消
               </button>
               <button
-                onClick={doSubmit}
+                onClick={() => doSubmit(false)}
                 className='px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700'
               >
                 确认提交
@@ -483,24 +578,66 @@ export const TakeExamPage: React.FC<TakeExamPageProps> = ({
         </div>
       )}
 
+      {/* 提交成功反馈 */}
+      {showSubmitSuccess && (
+        <div className='fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50'>
+          <div className='bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 text-center'>
+            <Check className='w-16 h-16 text-green-600 mx-auto mb-4' />
+            <h3 className='text-2xl font-semibold text-gray-900 mb-2'>
+              试卷已提交！
+            </h3>
+            <p className='text-gray-600 mb-2'>
+              AI正在批改您的试卷，请稍候...
+            </p>
+            <p className='text-sm text-gray-500 mb-6'>
+              您可以选择等待批改完成，或稍后查看结果
+            </p>
+            <div className='flex items-center justify-center gap-2 mb-6'>
+              {gradingStatus === '批改完成！' ? (
+                <>
+                  <Check className='w-5 h-5 text-green-600' />
+                  <span className='text-sm text-green-600'>{gradingStatus}</span>
+                </>
+              ) : (
+                <>
+                  <Loader2 className='w-5 h-5 animate-spin text-blue-600' />
+                  <span className='text-sm text-blue-600'>{gradingStatus}</span>
+                </>
+              )}
+            </div>
+            <div className='flex flex-col gap-3'>
+              <button
+                onClick={() => onNavigate?.('exam-result', examId)}
+                className='px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium'
+              >
+                查看批改结果
+              </button>
+              <button
+                onClick={() => onNavigate?.('exams')}
+                className='px-6 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200'
+              >
+                返回考试列表
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 提交失败提示 */}
       {submitMessage && (
         <div className='fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50'>
           <div className='bg-white rounded-lg shadow-xl p-8 max-w-sm w-full mx-4 text-center'>
-            {submitMessage.includes('成功') ||
-            submitMessage.includes('已提交') ? (
-              <Check className='w-12 h-12 text-green-600 mx-auto mb-4' />
-            ) : (
-              <X className='w-12 h-12 text-red-600 mx-auto mb-4' />
-            )}
+            <X className='w-12 h-12 text-red-600 mx-auto mb-4' />
             <p className='text-lg font-medium text-gray-900'>{submitMessage}</p>
-            {submitMessage.includes('失败') && (
-              <button
-                onClick={() => setSubmitMessage(null)}
-                className='mt-4 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200'
-              >
-                关闭
-              </button>
-            )}
+            <button
+              onClick={() => {
+                setSubmitMessage(null);
+                setIsSubmitting(false);
+              }}
+              className='mt-4 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200'
+            >
+              关闭
+            </button>
           </div>
         </div>
       )}
@@ -521,6 +658,7 @@ interface QuestionInputProps {
   onChange: (value: string | string[]) => void;
   blankCount?: number;
   onFocusChange?: (focused: boolean) => void;
+  disabled?: boolean;
 }
 
 const QuestionInput: React.FC<QuestionInputProps> = ({
@@ -529,6 +667,7 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
   onChange,
   blankCount = 1,
   onFocusChange,
+  disabled = false,
 }) => {
   // 单选题
   if (question.type === 'single' && question.options) {
@@ -537,7 +676,11 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
         {Object.entries(question.options).map(([key, text]) => (
           <label
             key={key}
-            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+              disabled
+                ? 'opacity-50 cursor-not-allowed'
+                : 'cursor-pointer'
+            } ${
               value === key
                 ? 'border-blue-500 bg-blue-50'
                 : 'border-gray-200 hover:bg-gray-50'
@@ -547,7 +690,8 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
               type='radio'
               name={`q-${question.id}`}
               checked={value === key}
-              onChange={() => onChange(key)}
+              onChange={() => !disabled && onChange(key)}
+              disabled={disabled}
               className='w-4 h-4 text-blue-600'
             />
             <span className='font-medium text-gray-700'>{key}.</span>
@@ -569,7 +713,11 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
         {Object.entries(question.options).map(([key, text]) => (
           <label
             key={key}
-            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+              disabled
+                ? 'opacity-50 cursor-not-allowed'
+                : 'cursor-pointer'
+            } ${
               selectedArr.includes(key)
                 ? 'border-blue-500 bg-blue-50'
                 : 'border-gray-200 hover:bg-gray-50'
@@ -579,11 +727,13 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
               type='checkbox'
               checked={selectedArr.includes(key)}
               onChange={() => {
+                if (disabled) return;
                 const newVal = selectedArr.includes(key)
                   ? selectedArr.filter(v => v !== key)
                   : [...selectedArr, key];
                 onChange(newVal);
               }}
+              disabled={disabled}
               className='w-4 h-4 text-blue-600 rounded'
             />
             <span className='font-medium text-gray-700'>{key}.</span>
@@ -610,6 +760,7 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
     }
 
     const handleBlankChange = (index: number, newValue: string) => {
+      if (disabled) return;
       const newBlanks = [...blanksValue];
       newBlanks[index] = newValue;
       onChange(newBlanks);
@@ -620,11 +771,12 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
         <input
           type='text'
           value={blanksValue[0] || ''}
-          onChange={e => onChange([e.target.value])}
+          onChange={e => !disabled && onChange([e.target.value])}
           onFocus={() => onFocusChange?.(true)}
           onBlur={() => onFocusChange?.(false)}
           placeholder='请输入答案...'
-          className='w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+          disabled={disabled}
+          className='w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed'
         />
       );
     }
@@ -643,7 +795,8 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
               onFocus={() => onFocusChange?.(true)}
               onBlur={() => onFocusChange?.(false)}
               placeholder={`请输入第 ${index + 1} 空的答案...`}
-              className='flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+              disabled={disabled}
+              className='flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed'
             />
           </div>
         ))}
@@ -655,12 +808,13 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
   return (
     <textarea
       value={typeof value === 'string' ? value : ''}
-      onChange={e => onChange(e.target.value)}
+      onChange={e => !disabled && onChange(e.target.value)}
       onFocus={() => onFocusChange?.(true)}
       onBlur={() => onFocusChange?.(false)}
       placeholder='请输入答案...'
       rows={6}
-      className='w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+      disabled={disabled}
+      className='w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed'
     />
   );
 };

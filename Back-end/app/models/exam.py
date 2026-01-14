@@ -8,7 +8,7 @@ import enum
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 
-from sqlalchemy import String, Text, Integer, ForeignKey, Enum, JSON, DateTime
+from sqlalchemy import String, Text, Integer, ForeignKey, Enum, JSON, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -108,6 +108,9 @@ class Attempt(Base, TimestampMixin):
     """
 
     __tablename__ = "attempts"
+    __table_args__ = (
+        UniqueConstraint("exam_id", "student_id", name="uq_attempt_exam_student"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     exam_id: Mapped[int] = mapped_column(

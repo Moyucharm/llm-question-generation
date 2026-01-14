@@ -392,12 +392,12 @@ class ExamService:
         await self.db.refresh(answer)
         return answer
 
-    async def submit_attempt(
+    async def submit_attempt_immediate(
         self,
         exam_id: int,
         student_id: int
     ) -> Optional[Attempt]:
-        """提交考试"""
+        """立即提交考试（不等待批改，返回SUBMITTED状态）"""
         attempt = await self.get_attempt(exam_id, student_id)
         if not attempt or attempt.status != AttemptStatus.IN_PROGRESS:
             return None
@@ -405,7 +405,41 @@ class ExamService:
         attempt.submitted_at = datetime.now(timezone.utc)
         attempt.status = AttemptStatus.SUBMITTED
 
-        # 自动评分客观题
+        await self.db.commit()
+        await self.db.refresh(attempt)
+        return attempt
+
+    async def submit_attempt(
+        self,
+        exam_id: int,
+        student_id: int
+    ) -> Optional[Attempt]:
+        """提交考试并执行批改（完整流程，用于后台任务）"""
+        attempt = await self.get_attempt(exam_id, student_id)
+        if not attempt or attempt.status != AttemptStatus.IN_PROGRESS:
+            return None
+
+        attempt.submitted_at = datetime.now(timezone.utc)
+        attempt.status = AttemptStatus.SUBMITTED
+
+        # 自动评分客观题和主观题
+        await self._auto_grade_attempt(attempt)
+
+        await self.db.commit()
+        await self.db.refresh(attempt)
+        return attempt
+
+    async def grade_submitted_attempt(
+        self,
+        exam_id: int,
+        student_id: int
+    ) -> Optional[Attempt]:
+        """后台批改已提交的考试（不检查状态，直接批改）"""
+        attempt = await self.get_attempt(exam_id, student_id)
+        if not attempt:
+            return None
+
+        # 直接执行批改，不检查状态
         await self._auto_grade_attempt(attempt)
 
         await self.db.commit()
@@ -442,9 +476,8 @@ class ExamService:
         grading_service = None
         try:
             grading_service = await create_grading_service()
-            print(f"[AI批改] 服务创建成功")
         except Exception as e:
-            print(f"[AI批改] 服务创建失败: {e}")
+            print(f"[批改] AI服务不可用: {e}")
             # AI服务不可用时跳过主观题批改
 
         total_score = 0
