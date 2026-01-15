@@ -4,465 +4,250 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-**QGen - 基于LLM的智能出题与在线考试系统** - 本科毕业设计项目
+QGen 是一个基于 LLM 的智能出题与在线考试系统（本科毕业设计项目）。
 
-核心创新：**三阶段题目质量控制流水线** (Generator → Validator → Reviewer)
+**核心特性：**
+- AI 智能出题 - 三阶段质量控制流水线 (Generator → Validator → Reviewer)
+- 多题型支持 - 单选、多选、填空、简答
+- 在线考试 - 创建/发布/参加/自动评分
+- 流式体验 - SSE 实时生成与批改
 
-| 模块 | 功能 |
+**技术栈：**
+| 模块 | 技术 |
 |------|------|
-| 教师端 | AI智能出题、题库管理、试卷组卷、考试发布、成绩统计 |
-| 学生端 | 在线答题、自动评分、考试记录查看 |
-| 系统侧 | 用户鉴权、数据持久化、LLM多模型封装 |
-
-## 技术栈
-
-| 层级 | 技术 |
-|------|------|
-| 前端 | React 19.1 + TypeScript 5.8 + Vite 7.0 + Zustand 5.0 + TailwindCSS 4.1 |
-| 后端 | FastAPI 0.115 + SQLAlchemy 2.0 + SQLite (aiosqlite异步) + JWT |
-| LLM | DeepSeek / Qwen / GLM (Provider抽象) |
-| 工具 | Husky + Commitlint + ESLint 9 + Prettier 3 + Black + Ruff |
+| 前端 | React 19 + TypeScript + Vite 7 + Zustand + TailwindCSS 4 |
+| 后端 | FastAPI + SQLAlchemy 2.0 (异步) + SQLite + JWT |
+| LLM | DeepSeek / Qwen / GLM (多模型 Provider 抽象) |
 
 ## 常用开发命令
 
-### 前端 (Front-end/)
-
-```bash
-cd Front-end
-
-pnpm install          # 安装依赖
-pnpm dev              # 启动开发服务器 (端口3000，自动代理/api到后端)
-pnpm build            # 构建生产版本
-pnpm check            # 代码检查 (ESLint + TypeScript)
-pnpm format           # 格式化代码 (Prettier)
-pnpm lint:fix         # 修复ESLint问题
-```
-
 ### 后端 (Back-end/)
-
 ```bash
-cd Back-end
+# 激活虚拟环境
+source venv/bin/activate        # Linux/Mac
+venv\Scripts\activate           # Windows
 
-# 虚拟环境
-python -m venv venv
-venv\Scripts\activate          # Windows
-source venv/bin/activate       # Linux/Mac
+# 启动开发服务器 (端口 8000)
+uvicorn app.main:app --reload
 
-pip install -r requirements.txt    # 安装依赖
-cp .env.example .env               # 配置环境变量（编辑.env设置API密钥）
+# 代码格式化与检查
+black app/
+ruff check app/
 
-uvicorn app.main:app --reload      # 启动开发服务器 (端口8000)
-
-black app/             # 代码格式化
-ruff check app/        # 代码检查
-pytest                 # 运行测试
+# 运行测试
+pytest
 ```
 
-### 同时开发前后端
+### 前端 (Front-end/)
+```bash
+pnpm dev          # 启动开发服务器 (端口 5173)
+pnpm build        # 构建生产版本 (tsc + vite build)
+pnpm check        # 代码检查 (ESLint + TypeScript)
+pnpm format       # 格式化代码 (Prettier)
+pnpm lint:fix     # 自动修复 ESLint 问题
+```
 
+### 同时启动前后端
 ```bash
 # 终端1: 后端
-cd Back-end && venv\Scripts\activate && uvicorn app.main:app --reload
+cd Back-end && source venv/bin/activate && uvicorn app.main:app --reload
 
-# 终端2: 前端
+# 终端2: 前端 (Vite 代理 /api 到 localhost:8000)
 cd Front-end && pnpm dev
 ```
 
-前端开发服务器会自动将 `/api/*` 请求代理到 `http://localhost:8000`。
+## 核心架构
 
-## 项目架构
-
-```
-bishe/
-├── Front-end/                      # React前端 (QGen)
-│   ├── src/
-│   │   ├── App.tsx                 # 主应用组件（状态驱动路由）
-│   │   ├── components/
-│   │   │   ├── Layout/             # 仪表板布局 (7个组件)
-│   │   │   │   ├── DashboardLayout.tsx   # 主容器布局
-│   │   │   │   ├── Sidebar.tsx           # 左侧导航栏
-│   │   │   │   ├── TopBar.tsx            # 顶部栏
-│   │   │   │   └── UserDropdown.tsx      # 用户下拉菜单
-│   │   │   ├── UI/                 # 基础UI组件 (10+个)
-│   │   │   │   ├── Button, Card, Modal, Avatar, Spinner...
-│   │   │   │   └── ConfirmModal, InputModal, LoadingScreen
-│   │   │   ├── Course/             # 课程组件
-│   │   │   │   ├── CourseList.tsx        # 课程列表
-│   │   │   │   └── KnowledgePointTree.tsx # 知识点树
-│   │   │   ├── Question/           # 题目渲染 (6个)
-│   │   │   │   ├── QuestionRenderer.tsx  # 通用渲染器
-│   │   │   │   ├── StreamingQuestionRenderer.tsx
-│   │   │   │   └── questions/            # 各题型组件
-│   │   │   ├── LogPanel/           # 日志面板 (虚拟化)
-│   │   │   └── TimeRecorder/       # 计时功能
-│   │   ├── pages/
-│   │   │   ├── auth/               # 认证 (登录/注册)
-│   │   │   ├── generation/         # AI出题 (表单/预设/预览)
-│   │   │   ├── course/             # 课程管理
-│   │   │   ├── question-bank/      # 题库管理 (列表/编辑/导入)
-│   │   │   ├── exam/               # 考试系统 (4个页面)
-│   │   │   │   ├── ExamListPage.tsx      # 考试列表 (375行)
-│   │   │   │   ├── CreateExamPage.tsx    # 创建考试 (220行)
-│   │   │   │   ├── ExamDetailPage.tsx    # 考试详情 (950行)
-│   │   │   │   └── TakeExamPage.tsx      # 学生答题 (528行)
-│   │   │   ├── quiz/               # 答题页 (流式渲染)
-│   │   │   └── result/             # 结果页 (AI批改展示)
-│   │   ├── stores/                 # Zustand状态管理 (20+文件)
-│   │   │   ├── useAppStore.ts      # 主应用状态
-│   │   │   ├── useAuthStore.ts     # 认证状态
-│   │   │   ├── useCourseStore.ts   # 课程状态
-│   │   │   ├── useExamStore.ts     # 考试状态
-│   │   │   ├── useLogStore.ts      # 日志状态
-│   │   │   └── generation/         # 生成子模块
-│   │   ├── services/               # API服务层 (6个)
-│   │   │   ├── authService.ts      # 认证API
-│   │   │   ├── courseService.ts    # 课程API
-│   │   │   ├── examService.ts      # 考试API
-│   │   │   └── questionBankService.ts # 题库API
-│   │   ├── llm/                    # LLM集成层
-│   │   │   ├── api/                # API客户端
-│   │   │   ├── services/           # 业务服务
-│   │   │   └── prompt/             # Prompt模板
-│   │   ├── types/                  # TypeScript类型
-│   │   │   ├── index.ts            # 题目、答题类型
-│   │   │   ├── course.ts           # 课程类型
-│   │   │   └── exam.ts             # 考试类型
-│   │   └── router/                 # 路由配置
-│   └── CLAUDE.md                   # 前端详细文档
-│
-├── Back-end/                       # FastAPI后端
-│   ├── app/
-│   │   ├── main.py                 # 应用入口
-│   │   ├── config.py               # Pydantic Settings配置
-│   │   ├── api/                    # 路由层 (8个文件)
-│   │   │   ├── deps.py             # 依赖注入（认证、权限）
-│   │   │   ├── auth.py             # 认证路由
-│   │   │   ├── llm.py              # LLM通用接口
-│   │   │   ├── questions.py        # 题目生成
-│   │   │   ├── courses.py          # 课程管理
-│   │   │   ├── question_bank.py    # 题库管理
-│   │   │   └── exams.py            # 考试管理
-│   │   ├── models/                 # 数据库模型 (6个文件)
-│   │   │   ├── user.py             # User表
-│   │   │   ├── course.py           # Course + KnowledgePoint表
-│   │   │   ├── question.py         # Question + Paper + PaperQuestion表
-│   │   │   ├── exam.py             # Exam + Attempt + AttemptAnswer表
-│   │   │   └── llm_log.py          # LLMLog表
-│   │   ├── schemas/                # Pydantic请求/响应模型 (6个)
-│   │   ├── services/               # 业务逻辑层 (10个)
-│   │   │   ├── auth.py             # 认证服务
-│   │   │   ├── llm_service.py      # LLM统一接口
-│   │   │   ├── generator_service.py    # 题目生成器
-│   │   │   ├── validator_service.py    # 规则校验器
-│   │   │   ├── reviewer_service.py     # AI自审服务
-│   │   │   ├── generation_pipeline.py  # 三阶段编排
-│   │   │   ├── course_service.py       # 课程服务
-│   │   │   ├── exam_service.py         # 考试服务
-│   │   │   └── question_bank_service.py # 题库服务
-│   │   └── core/llm/               # Provider抽象
-│   │       ├── base.py             # BaseLLMProvider基类
-│   │       ├── deepseek.py         # DeepSeek实现
-│   │       ├── qwen.py             # Qwen实现
-│   │       └── glm.py              # GLM实现
-│   └── README.md                   # 后端API文档
-│
-└── docs/
-    └── DATABASE_DESIGN.md          # 数据库设计文档
-```
-
-## 核心架构概念
-
-### 前端页面路由
-
-应用采用状态驱动路由，主要页面：
-
-| 页面 | currentPage状态 | 说明 |
-|------|-----------------|------|
-| 仪表板 | `dashboard` | 首页，快速入口 |
-| AI出题 | `generation` | 三阶段流水线出题 |
-| 课程管理 | `courses` | 课程与知识点CRUD |
-| 题库管理 | `question-bank` | 题目CRUD、导入导出 |
-| 考试列表 | `exams` | 教师创建/学生参加 |
-| 创建考试 | `exam-create` | 新建考试表单 |
-| 考试详情 | `exam-detail` | 查看/编辑考试 (需要currentExamId) |
-| 参加考试 | `exam-take` | 学生答题界面 (需要currentExamId) |
-| 答题页 | `quiz` / `streaming-quiz` | 出题后即时答题 |
-| 结果页 | `result` | AI批改结果展示 |
-
-### 后端三阶段流水线
+### 三阶段出题流水线 (后端核心)
 
 ```
 Generator (LLM生成) → Validator (规则校验) → Reviewer (AI自审)
-                            ↓                      ↓
-                       REJECTED              APPROVED / NEEDS_REVIEW
+     ↓                      ↓                      ↓
+  生成题目JSON         格式/答案校验           质量/正确性审核
+                           ↓                      ↓
+                      rejected (格式错误)    approved / needs_review
 ```
 
-- **Generator**: 调用LLM生成题目JSON
-- **Validator**: 代码校验格式、答案有效性、去重
-- **Reviewer**: LLM审核事实正确性、歧义检测，可尝试修复一次
+关键文件：
+- `Back-end/app/services/generation_pipeline.py` - 流水线编排
+- `Back-end/app/services/generator_service.py` - LLM 生成器
+- `Back-end/app/services/validator_service.py` - 规则校验器
+- `Back-end/app/services/reviewer_service.py` - AI 自审服务
 
-### LLM Provider抽象
+### LLM Provider 抽象 (后端)
 
-```python
-class BaseLLMProvider(ABC):
-    async def chat(self, messages, **kwargs) -> str
-    async def chat_stream(self, messages, **kwargs) -> AsyncGenerator
+```
+LLMService (统一接口)
+    ├── DeepSeekProvider
+    ├── QwenProvider
+    └── GLMProvider
 ```
 
-支持 DeepSeek/Qwen/GLM，通过 `.env` 配置 `LLM_PROVIDER` 切换。
+关键文件：`Back-end/app/core/llm/base.py` (抽象基类)
 
-### 数据库模型 (10张表)
+### 状态管理 (前端)
 
-| 表名 | 说明 |
-|------|------|
-| users | 用户 (student/teacher/admin角色) |
-| courses | 课程 |
-| knowledge_points | 知识点 (树形结构, parent_id自引用) |
-| questions | 题目 (单选/多选/填空/简答, JSON存储options/answer) |
-| papers | 试卷 |
-| paper_questions | 试卷-题目关联 (多对多) |
-| exams | 考试 (draft/published/closed状态) |
-| attempts | 答题记录 (in_progress/submitted/graded状态) |
-| attempt_answers | 单题答案 |
-| llm_logs | LLM调用日志 |
+使用 Zustand 模块化管理：
+- `useAppStore` - 主应用状态 (页面、题目、答案)
+- `useAuthStore` - 认证状态 (用户、Token)
+- `useCourseStore` - 课程与知识点
+- `useExamStore` - 考试状态
 
-## API端点概览
+### API 路由 (后端)
 
-| 模块 | 端点前缀 | 状态 |
-|------|----------|------|
-| 认证 | `/api/auth` | ✅ 注册/登录/用户信息 |
-| LLM | `/api/llm` | ✅ 通用对话/流式对话 |
-| 题目生成 | `/api/questions` | ✅ 完整流水线/快速生成/流式 |
-| 课程管理 | `/api/courses` | ✅ CRUD + 知识点树 |
-| 题库管理 | `/api/question-bank` | ✅ CRUD + 批量导入导出 |
-| 考试管理 | `/api/exams` | ✅ 完整考试生命周期 |
-| AI批改 | `/api/grading` | 🚧 待实现 (主观题) |
+| 模块 | 前缀 | 说明 |
+|------|------|------|
+| 认证 | `/api/auth` | 注册/登录/用户信息 |
+| LLM | `/api/llm` | 通用对话/流式对话 |
+| 题目生成 | `/api/questions` | 完整流水线/快速/流式生成 |
+| 课程 | `/api/courses` | 课程与知识点 CRUD |
+| 考试 | `/api/exams` | 考试管理/答题/评分 |
+| 题库 | `/api/question-bank` | 题目 CRUD/导入导出 |
 
-### 考试API详情 (`/api/exams`)
+API 文档：http://localhost:8000/api/docs (Swagger UI)
 
-| 方法 | 路径 | 角色 | 说明 |
-|------|------|------|------|
-| GET | `/api/exams` | 全部 | 获取考试列表 |
-| POST | `/api/exams` | 教师 | 创建考试 |
-| GET | `/api/exams/{id}` | 全部 | 获取考试详情 |
-| PUT | `/api/exams/{id}` | 教师 | 更新考试 |
-| DELETE | `/api/exams/{id}` | 教师 | 删除考试 |
-| POST | `/api/exams/{id}/publish` | 教师 | 发布考试 |
-| POST | `/api/exams/{id}/close` | 教师 | 关闭考试 |
-| POST | `/api/exams/{id}/questions` | 教师 | 添加题目 |
-| GET | `/api/exams/{id}/questions` | 全部 | 获取考试题目 |
-| DELETE | `/api/exams/{id}/questions/{qid}` | 教师 | 删除题目 |
-| POST | `/api/exams/{id}/start` | 学生 | 开始考试 |
-| GET | `/api/exams/{id}/attempt` | 学生 | 获取答题记录 |
-| POST | `/api/exams/{id}/answer` | 学生 | 保存答案 |
-| POST | `/api/exams/{id}/submit` | 学生 | 提交考试 |
-| GET | `/api/exams/{id}/attempts` | 教师 | 查看所有答题记录 |
+---
 
-API文档: http://localhost:8000/api/docs
+## 开发规范
 
-## 重要约束
+### 1. 调研优先（强制）
 
-### API密钥安全 ⚠️
+修改代码前必须：
+1. **检索相关代码** - 使用 `mcp__ace-tool__search_context` 或 LSP/Grep/Glob
+2. **识别复用机会** - 查找已有相似功能，优先复用而非重写
+3. **追踪调用链** - 使用 LSP `findReferences` 分析影响范围
 
-- **禁止**: 前端代码中出现任何API密钥
-- **必须**: 所有LLM调用通过后端 `/api/llm/*` 转发
-- **存储**: 密钥只能存放在后端 `.env` 文件中
+### 2. 修改前三问
 
-### 开发原则
+1. 这是真问题还是臆想？（拒绝过度设计）
+2. 有现成代码可复用吗？（优先复用）
+3. 会破坏什么调用关系？（保护依赖链）
 
-- **KISS**: 追求简洁，拒绝过度设计
-- **YAGNI**: 只实现当前需要的功能
-- **DRY**: 识别并消除重复代码
+### 3. 红线原则
 
-### Git操作
+- 禁止 copy-paste 重复代码
+- 禁止破坏现有功能
+- 禁止对错误方案妥协
+- 禁止盲目执行不加思考
+- 关键路径必须有错误处理
 
-- 未经用户明确要求，**不要自动执行** `git commit/push`
-- 遵循 Conventional Commits 规范
+### 4. 知识获取（强制）
 
-## 相关文档
+遇到不熟悉的知识，必须联网搜索，严禁猜测：
+- 通用搜索：`WebSearch` 或 `mcp__exa__web_search_exa`
+- 库文档：`mcp__context7__resolve-library-id` → `mcp__context7__get-library-docs`
+- 开源项目：`mcp__mcp-deepwiki__deepwiki_fetch`
 
-- [Front-end/CLAUDE.md](Front-end/CLAUDE.md) - 前端详细架构与开发指南
-- [Back-end/README.md](Back-end/README.md) - 后端API文档与使用说明
-- [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) - 数据库设计文档
+---
 
-## 当前开发状态
+## 任务分级
 
-### ✅ 已完成功能
+| 级别 | 判断标准 | 处理方式 |
+|------|----------|----------|
+| 简单 | 单文件、明确需求、< 20 行改动 | 直接执行 |
+| 中等 | 2-5 个文件、需要调研 | 简要说明方案 → 执行 |
+| 复杂 | 架构变更、多模块、不确定性高 | 完整规划流程 |
 
-| 模块 | 前端 | 后端 | 说明 |
-|------|------|------|------|
-| 用户认证 | ✅ | ✅ | JWT登录/注册/Token管理 |
-| LLM封装 | ✅ | ✅ | 支持DeepSeek/Qwen/GLM切换 |
-| 出题流水线 | ✅ | ✅ | 三阶段质量控制 |
-| 课程管理 | ✅ | ✅ | CRUD + 知识点树形结构 |
-| 题库管理 | ✅ | ✅ | 题目CRUD、导入导出JSON |
-| 出题集成 | ✅ | ✅ | 选择课程/知识点出题 |
-| 考试系统 | ✅ | ✅ | 创建/发布/参加/自动评分 |
-| 题目渲染 | ✅ | - | 单选/多选/填空/简答 |
-| 流式生成 | ✅ | ✅ | SSE实时生成和批改 |
-| 日志系统 | ✅ | ✅ | 虚拟化渲染、LLM调用日志 |
-| 仪表板UI | ✅ | - | 侧边栏+顶栏+卡片设计 |
+### 复杂任务流程
 
-### 🚧 待实现功能
+1. **RESEARCH** - 调研代码，不提建议
+2. **PLAN** - 列出方案，等待用户确认
+3. **EXECUTE** - 严格按计划执行
+4. **REVIEW** - 完成后自检
 
-| 模块 | 说明 |
-|------|------|
-| 试卷管理 | 试卷CRUD、从题库选题组卷 |
-| AI主观题批改 | 简答题智能评分 + 反馈 |
-| 学习分析 | 错题本、薄弱点分析 |
-| 数据统计 | 成绩统计、学习路径可视化 |
-| 数据库迁移 | Alembic迁移脚本 |
-| Docker部署 | 容器化部署配置 |
+触发方式：用户说 "进入 X 模式" 或任务符合复杂标准时自动启用
 
-## 功能模块详情
+### 复杂问题深度思考
 
-### 认证系统
+触发场景：多步骤推理、架构设计、疑难调试、方案对比
+强制工具：`mcp__sequential-thinking__sequentialthinking`
 
-| 文件 | 说明 |
-|------|------|
-| `Front-end/src/pages/auth/` | 登录/注册页面 |
-| `Front-end/src/stores/useAuthStore.ts` | 认证状态管理 |
-| `Front-end/src/services/authService.ts` | 认证API封装 |
-| `Back-end/app/api/auth.py` | 认证路由 |
-| `Back-end/app/services/auth.py` | 认证业务逻辑 |
-| `Back-end/app/core/security.py` | JWT/密码加密 |
+---
 
-### 课程与知识点管理
+## 工具使用指南
 
-| 文件 | 说明 |
-|------|------|
-| `Front-end/src/pages/course/CourseManagementPage.tsx` | 课程管理页面 |
-| `Front-end/src/components/Course/CourseList.tsx` | 课程列表组件 |
-| `Front-end/src/components/Course/KnowledgePointTree.tsx` | 知识点树 |
-| `Front-end/src/stores/useCourseStore.ts` | 课程状态管理 |
-| `Back-end/app/api/courses.py` | 课程路由 |
-| `Back-end/app/models/course.py` | Course, KnowledgePoint模型 |
+| 场景 | 推荐工具 |
+|------|----------|
+| 代码语义检索 | mcp__ace-tool__search_context |
+| 精确字符串/正则查找 | Grep |
+| 文件名模式匹配 | Glob |
+| 符号定义/引用跳转 | LSP (goToDefinition, findReferences) |
+| 复杂多步骤任务 | Task + 合适的 subagent_type |
+| 代码库探索 | Task + subagent_type=Explore |
+| 技术方案规划 | EnterPlanMode 或 Task + subagent_type=Plan |
+| 库官方文档 | mcp__context7 |
+| 开源项目文档 | mcp__mcp-deepwiki__deepwiki_fetch |
+| 联网搜索 | WebSearch / mcp__exa__web_search_exa |
+| 跨会话记忆 | mcp__memory__* |
 
-### 题库管理
+### 工具选择原则
 
-| 文件 | 说明 |
-|------|------|
-| `Front-end/src/pages/question-bank/QuestionBankPage.tsx` | 题库列表 |
-| `Front-end/src/pages/question-bank/QuestionEditModal.tsx` | 编辑题目 |
-| `Front-end/src/pages/question-bank/QuestionImportModal.tsx` | 导入题目 |
-| `Front-end/src/services/questionBankService.ts` | 题库API |
-| `Back-end/app/api/question_bank.py` | 题库路由 |
-| `Back-end/app/services/question_bank_service.py` | 题库业务逻辑 |
+- 语义理解用 `ace-tool`，精确匹配用 `Grep`
+- 跳转定义/引用优先用 `LSP`，比 Grep 更精准
+- 探索性任务用 `Task + Explore`，避免多次手动搜索
 
-### 考试系统
+---
 
-| 文件 | 说明 |
-|------|------|
-| `Front-end/src/pages/exam/ExamListPage.tsx` | 考试列表 (教师/学生视图) |
-| `Front-end/src/pages/exam/CreateExamPage.tsx` | 创建考试表单 |
-| `Front-end/src/pages/exam/ExamDetailPage.tsx` | 考试详情与编辑 |
-| `Front-end/src/pages/exam/TakeExamPage.tsx` | 学生答题界面 |
-| `Front-end/src/stores/useExamStore.ts` | 考试状态管理 |
-| `Front-end/src/services/examService.ts` | 考试API封装 |
-| `Front-end/src/types/exam.ts` | 考试相关类型 |
-| `Back-end/app/api/exams.py` | 考试路由 |
-| `Back-end/app/models/exam.py` | Exam, Attempt, AttemptAnswer模型 |
-| `Back-end/app/services/exam_service.py` | 考试业务逻辑 |
-| `Back-end/app/schemas/exam.py` | 考试请求/响应模型 |
+## Git 规范
 
-### 仪表板布局
+- 不主动提交，除非用户明确要求
+- 不主动 push，除非用户明确要求
+- Commit 格式：`<type>(<scope>): <description>`
+- 提交时不添加 Claude 署名标记
+- 提交前：`git diff` 确认改动范围
+- 禁止 `--force` 推送到 main/master
 
-| 文件 | 说明 |
-|------|------|
-| `Front-end/src/components/Layout/DashboardLayout.tsx` | 主布局容器 |
-| `Front-end/src/components/Layout/Sidebar.tsx` | 左侧导航栏 |
-| `Front-end/src/components/Layout/TopBar.tsx` | 顶部导航栏 |
-| `Front-end/src/components/Layout/UserDropdown.tsx` | 用户下拉菜单 |
-| `Front-end/src/components/Layout/PageContainer.tsx` | 内容区容器 |
-| `Front-end/src/components/UI/` | Button, Card, Modal, Avatar, Spinner等 |
+---
 
-### 设计风格
+## 安全检查
 
-- 浅灰背景 (`bg-gray-100`) + 白色卡片
-- 左侧固定侧边栏 (w-64, 深色主题)
-- 顶部导航栏 (h-16) + 用户下拉菜单
-- 蓝色主题色 (`blue-600`)
-- 圆角卡片 + 轻阴影
-- React Window 虚拟化列表
+- 禁止硬编码密钥/密码/token
+- 不提交 .env/credentials 等敏感文件
+- 用户输入在系统边界必须验证
+- 所有 LLM 调用通过后端转发，前端禁止存储 API 密钥
 
-## 前端状态管理 (Zustand)
+---
 
-### useAppStore - 主应用状态
+## 代码风格
 
-管理出题 → 答题 → 批改的完整流程：
-- `generation`: 题目生成状态
-- `answering`: 答题状态
-- `grading`: 批改状态
+- **KISS** - 能简单就不复杂
+- **DRY** - 零容忍重复，必须复用
+- **保护调用链** - 修改函数签名时同步更新所有调用点
 
-### useAuthStore - 认证状态
+### 后端规范
+- 使用 Black 格式化 + Ruff 检查
+- 所有函数必须添加类型注解
+- 优先使用 async/await
+- 错误处理使用 FastAPI HTTPException
 
-- `user`: 当前用户信息
-- `isLoggedIn`: 登录状态
-- `login/logout/register`: 认证操作
+### 前端规范
+- TypeScript 严格模式
+- ESLint + Prettier 代码规范
+- Husky git hooks (commitlint)
 
-### useCourseStore - 课程状态
+### 完成后清理
+删除：临时文件、注释掉的废弃代码、未使用的导入、调试日志
 
-- `courses`: 课程列表
-- `fetchCourses/createCourse/updateCourse/deleteCourse`
-- `createKnowledgePoint/deleteKnowledgePoint`
+---
 
-### useExamStore - 考试状态
+## 交互规范
 
-- `exams`: 考试列表
-- `currentExam`: 当前考试详情
-- `currentAttempt`: 当前答题记录
-- `fetchExams/createExam/publishExam/startExam/submitExam`
+### 何时询问用户
+- 存在多个合理方案时
+- 需求不明确或有歧义时
+- 改动范围超出预期时
+- 发现潜在风险时
 
-### useLogStore - 日志状态
+### 何时直接执行
+- 需求明确且方案唯一
+- 小范围修改（< 20 行）
+- 用户已确认过类似操作
 
-- `logs`: 日志条目 (虚拟化渲染)
-- `sessions`: 流式会话
-- `addLog/clearLogs/toggleVisibility`
+### 敢于说不
+发现问题直接指出，不妥协于错误方案
 
-## 技术亮点
+---
 
-### 前端
-
-- **Vite 7** - 超快速构建与HMR
-- **React 19** - 最新并发特性
-- **TypeScript 严格模式** - 类型安全
-- **Zustand** - 轻量级状态管理
-- **TailwindCSS 4** - 原子化CSS
-- **React Window** - 虚拟化列表渲染
-- **SSE流式渲染** - 实时用户体验
-- **Husky + Commitlint** - Git提交规范
-
-### 后端
-
-- **FastAPI异步框架** - 高性能
-- **SQLAlchemy 2.0 异步ORM** - 现代数据库操作
-- **JWT认证** - 安全的用户验证
-- **三阶段质量流水线** - 核心创新
-- **LLM Provider抽象** - 多模型支持
-- **SSE流式输出** - 实时数据推送
-- **CORS中间件** - 跨域请求支持
-
-## 下一步任务：试卷管理与AI批改
-
-### 试卷管理
-
-| 模块 | 说明 |
-|------|------|
-| 后端API | `/api/papers` CRUD |
-| 前端页面 | 试卷列表、组卷界面 |
-| 功能 | 从题库选题组卷 |
-
-### AI主观题批改
-
-| 模块 | 说明 |
-|------|------|
-| 后端API | `/api/grading` 智能批改 |
-| 前端集成 | 批改结果展示 |
-| 功能 | 简答题智能评分+反馈 |
-
-### 验收标准
-
-- [ ] 教师可以创建/编辑/删除试卷
-- [ ] 可以从题库选择题目组卷
-- [ ] 简答题支持AI智能批改
-- [ ] 学生可以查看批改反馈
+## 输出设置
+- 中文响应
+- 禁止截断输出

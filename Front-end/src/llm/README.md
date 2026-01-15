@@ -180,16 +180,11 @@ const services = createQuizServices(customClient);
 - **DeepSeek**：DeepSeek Chat, DeepSeek Coder
 - **智谱 AI**：GLM-4 系列（默认）
 
-### 环境变量配置
+### 配置说明
 
-```bash
-# LLM API 配置
-VITE_LLM_API_KEY=your-api-key
-VITE_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
-VITE_LLM_MODEL=glm-4-flash-250414
-VITE_LLM_MAX_TOKENS=4000
-VITE_LLM_TEMPERATURE=0.7
-```
+> **注意**：LLM API 密钥和配置现已迁移至后端管理，前端通过 `/api` 代理转发请求，无需配置环境变量。
+>
+> 后端配置请参考：[Back-end/.env.example](../../../Back-end/.env.example)
 
 ## 🛠️ 开发指南
 
