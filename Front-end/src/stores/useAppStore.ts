@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { AppState } from '@/types';
 import {
   createGenerationActions,
+  createInitialGenerationState,
   type GenerationActions,
   type GenerationState,
 } from './generationActions';
@@ -27,12 +28,8 @@ interface AppStore extends GenerationActions, AnsweringActions, GradingActions {
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
-  // 初始状态
-  generation: {
-    status: 'idle',
-    currentQuiz: null,
-    error: null,
-  },
+  // 初始状态 - 使用统一的初始化函数
+  generation: createInitialGenerationState(),
   answering: {
     currentQuestionIndex: 0,
     isSubmitted: false,
@@ -51,11 +48,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   // 重置整个应用状态
   resetApp: () => {
     set(() => ({
-      generation: {
-        status: 'idle',
-        currentQuiz: null,
-        error: null,
-      },
+      generation: createInitialGenerationState(),
       answering: {
         currentQuestionIndex: 0,
         isSubmitted: false,

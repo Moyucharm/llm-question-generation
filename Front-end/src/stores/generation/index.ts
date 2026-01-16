@@ -9,6 +9,8 @@ export type {
   GenerationState,
   GenerationActions,
   StateUpdater,
+  GenerationMode,
+  ReviewQuestion,
 } from './types';
 
 // 导出主要功能

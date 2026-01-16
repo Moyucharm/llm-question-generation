@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
-import { GenerationPage, QuizPage, ResultPage } from '@/pages';
+import { GenerationPage, QuizPage, ResultPage, ReviewPage } from '@/pages';
 import { StreamingQuizPage } from '@/pages/quiz/streaming';
 
 /**
@@ -36,8 +36,13 @@ export const AppRouter: React.FC = () => {
       return <StreamingQuizPage />;
     }
 
-    // 如果试卷已生成，显示答题页面
+    // 如果试卷已生成
     if (generation.status === 'complete' && generation.currentQuiz) {
+      // 审阅模式 → 显示审阅页面
+      if (generation.mode === 'review') {
+        return <ReviewPage />;
+      }
+      // 做题模式 → 显示答题页面
       return <QuizPage />;
     }
 
@@ -46,7 +51,7 @@ export const AppRouter: React.FC = () => {
   };
 
   useEffect(() => {
-    let routeKey: 'generation' | 'quiz' | 'result' = 'generation';
+    let routeKey: 'generation' | 'quiz' | 'result' | 'review' = 'generation';
     if (grading.status === 'complete' && grading.result) {
       routeKey = 'result';
     } else if (grading.status === 'grading') {
@@ -60,7 +65,8 @@ export const AppRouter: React.FC = () => {
     ) {
       routeKey = 'quiz';
     } else if (generation.status === 'complete' && generation.currentQuiz) {
-      routeKey = 'quiz';
+      // 根据模式决定路由
+      routeKey = generation.mode === 'review' ? 'review' : 'quiz';
     }
 
     const desiredPath = `/${routeKey}`;
@@ -72,6 +78,7 @@ export const AppRouter: React.FC = () => {
     generation.currentQuiz,
     generation.status,
     generation.streamingQuestions,
+    generation.mode,
     grading.result,
     grading.status,
   ]);

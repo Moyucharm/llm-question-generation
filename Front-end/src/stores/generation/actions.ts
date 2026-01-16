@@ -2,8 +2,12 @@
  * 试卷生成Actions模块
  */
 
-import type { GenerationRequest } from '@/types';
-import type { GenerationActions, StreamingQuestion } from './types';
+import type { GenerationRequest, Question } from '@/types';
+import type {
+  GenerationActions,
+  StreamingQuestion,
+  GenerationMode,
+} from './types';
 import { GenerationStateManager } from './stateManager';
 import { generateQuiz } from './generators';
 
@@ -60,6 +64,62 @@ export const createGenerationActions = (
      */
     updateStreamingQuestion: (index: number, question: StreamingQuestion) => {
       stateManager.updateStreamingQuestion(index, question);
+    },
+
+    /**
+     * 设置生成模式
+     * @param mode 生成模式 (quiz/review)
+     */
+    setGenerationMode: (mode: GenerationMode) => {
+      stateManager.setMode(mode);
+    },
+
+    /**
+     * 更新审阅题目
+     * @param index 题目索引
+     * @param data 题目数据
+     */
+    updateReviewQuestion: (index: number, data: Partial<Question>) => {
+      stateManager.updateReviewQuestion(index, data);
+    },
+
+    /**
+     * 删除审阅题目
+     * @param index 题目索引
+     */
+    deleteReviewQuestion: (index: number) => {
+      stateManager.deleteReviewQuestion(index);
+    },
+
+    /**
+     * 切换题目选中状态
+     * @param index 题目索引
+     */
+    toggleQuestionSelection: (index: number) => {
+      stateManager.toggleQuestionSelection(index);
+    },
+
+    /**
+     * 全选题目
+     */
+    selectAllQuestions: () => {
+      stateManager.selectAllQuestions();
+    },
+
+    /**
+     * 取消全选
+     */
+    deselectAllQuestions: () => {
+      stateManager.deselectAllQuestions();
+    },
+
+    /**
+     * 设置题目编辑状态
+     * @param index 题目索引
+     * @param isEditing 是否编辑中
+     */
+    setQuestionEditing: (index: number, isEditing: boolean) => {
+      stateManager.setQuestionEditing(index, isEditing);
     },
   };
 };
